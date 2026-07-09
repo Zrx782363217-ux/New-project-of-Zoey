@@ -84,6 +84,7 @@ date + brand + platform + channel
 ```text
 DATABASE_URL=postgresql+psycopg2://postgres:你的数据库密码@db.xxxxxx.supabase.co:5432/postgres
 APP_PASSWORD=你的前端访问密码
+DEFAULT_YEAR=2026
 ```
 
 2. 把 Excel 放进 `data` 文件夹。
@@ -94,13 +95,33 @@ APP_PASSWORD=你的前端访问密码
 pip install -r requirements.txt
 ```
 
-4. 运行导入脚本：
+4. 正式导入前先 dry-run 检查日期范围：
+
+```bash
+python import_excel.py --dry-run
+```
+
+dry-run 只解析和打印预览，不写入数据库。重点检查每个文件的识别月份和解析日期范围，例如 6 月文件应显示 `2026-06-01` 到 `2026-06-30`。
+
+5. 确认日期范围无误后运行导入脚本：
 
 ```bash
 python import_excel.py
 ```
 
-5. 导入成功后刷新 Streamlit 网页。
+也可以在 Mac 上双击 `run_import.command` 导入。首次使用前需要授权：
+
+```bash
+chmod +x run_import.command
+```
+
+授权后，双击 `run_import.command` 即可自动进入项目目录并运行：
+
+```bash
+python3 import_excel.py
+```
+
+6. 导入成功后刷新 Streamlit 网页。
 
 命令行会打印：
 
@@ -110,6 +131,31 @@ python import_excel.py
 - 更新多少条
 - 失败多少条
 - 失败原因
+
+导入脚本会自动读取 `data` 文件夹下所有 `.xlsx` 和 `.xls` 文件，并跳过 `~$` 开头的 Excel 临时文件。不再要求固定上传某个月份的文件。
+
+## 日期识别规则
+
+- 文件名包含 `6月` 或 `6月份` 时，按 6 月解析
+- 文件名包含 `7月` 或 `7月份` 时，按 7 月解析
+- 其他月份同理
+- 文件名包含 `2026年6月`、`2026-06`、`2026.6` 时，使用文件名中的年份
+- 文件名没有年份时，优先使用 `.env` 中的 `DEFAULT_YEAR`
+- 没有 `DEFAULT_YEAR` 时，使用当前年份
+- 日期列是 `6.1` 时解析为 `DEFAULT_YEAR-06-01`
+- 日期列是 `1`、`2`、`3` 时，结合文件名识别到的月份解析
+
+如果文件名、sheet 名和日期列都无法识别月份，脚本不会默认写成 7 月，而会给出解析提示。
+
+## 如果之前误导入过数据
+
+如果之前错误导入过 6 月数据，并且怀疑覆盖了 7 月数据，不要让脚本自动清库。最简单的修复方式是：
+
+1. 你确认后手动清空 `daily_metrics` 和 `raw_metrics` 测试数据
+2. 用修复后的脚本先运行 `python import_excel.py --dry-run` 检查 6 月日期
+3. 正式重新导入 6 月
+4. 再重新导入 7 月
+5. 刷新网页，确认可以分别看到 6 月和 7 月趋势
 
 ## 本地预览前端
 
