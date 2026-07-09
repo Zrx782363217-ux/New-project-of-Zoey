@@ -10,7 +10,7 @@ import plotly.express as px
 import streamlit as st
 from dotenv import load_dotenv
 
-from db import load_daily_metrics
+from db import get_engine, init_db, load_daily_metrics
 
 
 load_dotenv(override=True)
@@ -330,7 +330,7 @@ def load_uploaded_data(uploaded_files) -> tuple[pd.DataFrame, pd.DataFrame, list
 def load_history_from_database() -> tuple[pd.DataFrame, str]:
     engine = get_engine()
     if engine is None:
-        return pd.DataFrame(columns=STANDARD_COLUMNS), "请联系管理员配置数据库连接。"
+        return pd.DataFrame(columns=STANDARD_COLUMNS), "未配置 DATABASE_URL，请管理员配置数据库连接。"
     try:
         init_db(engine)
         history_df = load_daily_metrics(engine=engine)
