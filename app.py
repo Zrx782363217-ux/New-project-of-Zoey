@@ -42,18 +42,18 @@ STANDARD_COLUMNS = [
 DISPLAY_COLUMNS = STANDARD_COLUMNS.copy()
 
 COLOR_PALETTE = {
-    "最护-抖店": "#2563EB",
-    "最护-拼多多": "#059669",
+    "最护-抖店": "#4F6BFF",
+    "最护-拼多多": "#8B5CF6",
     "碧维-抖店": "#F97316",
-    "碧维-拼多多": "#16A34A",
-    "最护-抖店-整体": "#2563EB",
+    "碧维-拼多多": "#22C55E",
+    "最护-抖店-整体": "#4F6BFF",
     "最护-抖店-商品卡": "#7C3AED",
     "最护-抖店-直播": "#0EA5E9",
     "最护-抖店-短视频": "#6366F1",
     "最护-抖店-店铺号商品卡": "#4F46E5",
     "最护-抖店-洗脸巾直播": "#0891B2",
-    "最护-拼多多-整体": "#1D4ED8",
-    "最护-拼多多-商品卡": "#10B981",
+    "最护-拼多多-整体": "#2563EB",
+    "最护-拼多多-商品卡": "#8B5CF6",
     "最护-抖店-千川投放": "#9333EA",
     "最护-抖店-千川·直播": "#9333EA",
     "最护-抖店-千川·商品卡": "#A855F7",
@@ -70,16 +70,16 @@ COLOR_PALETTE = {
 }
 
 FALLBACK_COLORS = [
-    "#2563EB",
+    "#4F6BFF",
     "#F97316",
-    "#16A34A",
-    "#7C3AED",
-    "#DC2626",
-    "#0891B2",
-    "#CA8A04",
-    "#DB2777",
-    "#4F46E5",
-    "#059669",
+    "#22C55E",
+    "#8B5CF6",
+    "#EF4444",
+    "#06B6D4",
+    "#FACC15",
+    "#EC4899",
+    "#2563EB",
+    "#10B981",
     "#EA580C",
     "#9333EA",
 ]
@@ -94,13 +94,13 @@ def get_series_color(label: str) -> str:
         checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
         return qianchuan_colors[checksum % len(qianchuan_colors)]
     if "拼多多" in normalized:
-        return "#059669" if normalized.startswith("最护-") else "#16A34A"
+        return "#8B5CF6" if normalized.startswith("最护-") else "#22C55E"
     if normalized.startswith("最护-"):
-        cold_colors = ["#2563EB", "#7C3AED", "#0EA5E9", "#4F46E5", "#0891B2"]
+        cold_colors = ["#4F6BFF", "#7C3AED", "#0EA5E9", "#6366F1", "#06B6D4"]
         checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
         return cold_colors[checksum % len(cold_colors)]
     if normalized.startswith("碧维-"):
-        warm_colors = ["#F97316", "#EA580C", "#FB923C", "#F59E0B", "#16A34A"]
+        warm_colors = ["#F97316", "#EA580C", "#FB923C", "#F59E0B", "#22C55E"]
         checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
         return warm_colors[checksum % len(warm_colors)]
     checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
@@ -525,19 +525,20 @@ def inject_custom_css():
         """
         <style>
         :root {
-            --page: #f6f7fb;
-            --surface: rgba(255, 255, 255, 0.88);
+            --page: #fafbff;
+            --surface: rgba(255, 255, 255, 0.90);
             --surface-strong: #ffffff;
-            --ink: #1a1d29;
-            --muted: #6f778a;
-            --weak: #9aa3b2;
+            --ink: #172033;
+            --muted: #707a8f;
+            --weak: #8b95a8;
             --line: rgba(123, 135, 158, 0.16);
-            --blue: #5b7cfa;
-            --purple: #8f7cff;
-            --cyan: #54c6eb;
-            --green: #12a66a;
-            --red: #e0565b;
-            --orange: #f59e0b;
+            --blue: #4f6bff;
+            --purple: #8b5cf6;
+            --cyan: #06b6d4;
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f97316;
+            --yellow: #facc15;
         }
         html, body, [class*="css"] {
             font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -546,9 +547,10 @@ def inject_custom_css():
         }
         .stApp {
             background:
-                linear-gradient(135deg, rgba(91, 124, 250, 0.08) 0%, transparent 28%),
-                linear-gradient(225deg, rgba(84, 198, 235, 0.07) 0%, transparent 24%),
-                var(--page);
+                linear-gradient(135deg, rgba(79, 107, 255, 0.10) 0%, transparent 27%),
+                linear-gradient(225deg, rgba(34, 197, 94, 0.08) 0%, transparent 24%),
+                linear-gradient(0deg, rgba(249, 115, 22, 0.055) 0%, transparent 28%),
+                linear-gradient(180deg, #fafbff 0%, #f5f7fb 100%);
         }
         [data-testid="stHeader"] { background: transparent; }
         .block-container {
@@ -557,7 +559,7 @@ def inject_custom_css():
             padding-bottom: 4rem;
         }
         .dashboard-hero {
-            padding: 18px 0 22px;
+            padding: 5px 0;
         }
         .hero-kicker {
             color: var(--blue);
@@ -568,18 +570,32 @@ def inject_custom_css():
         }
         .main-title {
             color: var(--ink);
-            font-size: clamp(34px, 4vw, 50px);
-            line-height: 1.08;
+            font-size: clamp(26px, 3vw, 34px);
+            line-height: 1.15;
             font-weight: 780;
-            margin: 0 0 12px;
+            margin: 0 0 7px;
         }
         .subtle-note {
             color: var(--muted);
-            font-size: 14px;
-            line-height: 1.75;
+            font-size: 12px;
+            line-height: 1.65;
             max-width: 820px;
         }
-        .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 14px; }
+        .header-brand-row { display: flex; align-items: center; gap: 14px; }
+        .header-logo {
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            box-shadow: 0 10px 24px rgba(79, 107, 255, 0.24);
+        }
+        .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
         .status-chip, .date-chip {
             display: inline-flex;
             align-items: center;
@@ -599,7 +615,7 @@ def inject_custom_css():
             border-radius: 50%;
             background: var(--green);
             margin-right: 7px;
-            box-shadow: 0 0 0 3px rgba(18, 166, 106, 0.10);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.10);
         }
         .page-heading { margin: 26px 0 16px; }
         .page-eyebrow { color: var(--blue); font-size: 11px; font-weight: 750; margin-bottom: 6px; }
@@ -612,6 +628,15 @@ def inject_custom_css():
             margin: 28px 0 12px;
         }
         .section-subtitle { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
+        .st-key-product_header {
+            padding: 18px 20px !important;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.96) !important;
+            border-radius: 8px;
+            box-shadow: 0 16px 42px rgba(79, 107, 255, 0.08), 0 6px 18px rgba(23, 32, 51, 0.04);
+            backdrop-filter: blur(18px);
+        }
         .metric-card {
             position: relative;
             overflow: hidden;
@@ -619,7 +644,7 @@ def inject_custom_css():
             border: 1px solid rgba(255, 255, 255, 0.88);
             border-radius: 8px;
             padding: 20px 20px 18px;
-            box-shadow: 0 16px 38px rgba(31, 41, 55, 0.07);
+            box-shadow: 0 15px 36px rgba(43, 52, 71, 0.07);
             backdrop-filter: blur(18px);
             min-height: 132px;
             margin-bottom: 14px;
@@ -629,9 +654,26 @@ def inject_custom_css():
             position: absolute;
             inset: 0 auto 0 0;
             width: 3px;
-            background: linear-gradient(180deg, var(--blue), var(--cyan));
+            background: var(--metric-accent, var(--blue));
+            opacity: 0.88;
+        }
+        .metric-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 64px;
+            height: 7px;
+            background: var(--metric-accent, var(--blue));
             opacity: 0.72;
         }
+        .accent-blue { --metric-accent: #4f6bff; background: linear-gradient(145deg, rgba(79,107,255,.065), rgba(255,255,255,.94) 44%); }
+        .accent-cyan { --metric-accent: #06b6d4; background: linear-gradient(145deg, rgba(6,182,212,.065), rgba(255,255,255,.94) 44%); }
+        .accent-orange { --metric-accent: #f97316; background: linear-gradient(145deg, rgba(249,115,22,.07), rgba(255,255,255,.94) 44%); }
+        .accent-green { --metric-accent: #22c55e; background: linear-gradient(145deg, rgba(34,197,94,.07), rgba(255,255,255,.94) 44%); }
+        .accent-purple { --metric-accent: #8b5cf6; background: linear-gradient(145deg, rgba(139,92,246,.07), rgba(255,255,255,.94) 44%); }
+        .accent-red { --metric-accent: #ef4444; background: linear-gradient(145deg, rgba(239,68,68,.065), rgba(255,255,255,.94) 44%); }
+        .accent-gray { --metric-accent: #8b95a8; }
         .metric-card.metric-secondary { min-height: 118px; box-shadow: 0 10px 26px rgba(31, 41, 55, 0.055); }
         .metric-label { color: var(--muted); font-size: 12px; font-weight: 650; margin-bottom: 12px; }
         .metric-value { color: var(--ink); font-size: 31px; font-weight: 780; line-height: 1.12; }
@@ -645,12 +687,12 @@ def inject_custom_css():
             font-size: 11px;
             font-weight: 750;
         }
-        .delta-pos { color: #0c8b59; background: rgba(18, 166, 106, 0.10); }
-        .delta-neg { color: #c8454c; background: rgba(224, 86, 91, 0.10); }
+        .delta-pos { color: #059669; background: rgba(16, 185, 129, 0.11); }
+        .delta-neg { color: #dc2626; background: rgba(239, 68, 68, 0.10); }
         .delta-flat { color: var(--muted); background: rgba(111, 119, 138, 0.09); }
         .info-box {
-            background: linear-gradient(135deg, rgba(91, 124, 250, 0.07), rgba(84, 198, 235, 0.05));
-            border: 1px solid rgba(91, 124, 250, 0.13);
+            background: linear-gradient(135deg, rgba(79, 107, 255, 0.07), rgba(6, 182, 212, 0.05));
+            border: 1px solid rgba(79, 107, 255, 0.13);
             border-radius: 8px;
             padding: 18px 20px;
             margin-bottom: 16px;
@@ -670,7 +712,23 @@ def inject_custom_css():
             backdrop-filter: blur(18px);
             min-height: 292px;
             margin-bottom: 16px;
+            overflow: hidden;
         }
+        .business-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: var(--business-accent, var(--blue));
+        }
+        .brand-zuihu { --business-accent: #4f6bff; background: linear-gradient(145deg, rgba(79,107,255,.055), rgba(255,255,255,.94) 42%); }
+        .brand-biwei { --business-accent: #22c55e; background: linear-gradient(145deg, rgba(34,197,94,.055), rgba(255,255,255,.94) 42%); }
+        .brand-zuihu .business-gmv { color: #3f57d8; }
+        .brand-biwei .business-gmv { color: #159447; }
+        .platform-tag { display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 750; margin-left: 8px; }
+        .platform-douyin { color: #dc2626; background: rgba(239,68,68,.10); }
+        .platform-pdd { color: #15803d; background: rgba(34,197,94,.11); }
+        .business-title-group { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
         .business-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
         .business-name { color: var(--ink); font-size: 17px; font-weight: 750; }
         .business-gmv-label { color: var(--weak); font-size: 11px; margin-top: 22px; }
@@ -687,9 +745,9 @@ def inject_custom_css():
         .business-stat-value { color: #34394a; font-size: 14px; font-weight: 720; word-break: break-word; }
         .business-foot { color: var(--muted); font-size: 11px; margin-top: 18px; }
         .state-tag { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 750; }
-        .state-normal { color: #0c8b59; background: rgba(18, 166, 106, 0.10); }
-        .state-watch { color: #b56c00; background: rgba(245, 158, 11, 0.12); }
-        .state-risk { color: #c8454c; background: rgba(224, 86, 91, 0.11); }
+        .state-normal { color: #059669; background: rgba(16, 185, 129, 0.11); }
+        .state-watch { color: #c35e09; background: rgba(249, 115, 22, 0.12); }
+        .state-risk { color: #dc2626; background: rgba(239, 68, 68, 0.11); }
         .alert-card {
             position: relative;
             border-radius: 8px;
@@ -700,20 +758,20 @@ def inject_custom_css():
             overflow: hidden;
         }
         .alert-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; }
-        .alert-high { background: rgba(255, 247, 247, 0.92); border-color: rgba(224, 86, 91, 0.18); }
+        .alert-high { background: rgba(255, 247, 247, 0.92); border-color: rgba(239, 68, 68, 0.18); }
         .alert-high::before { background: var(--red); }
-        .alert-mid { background: rgba(255, 250, 241, 0.92); border-color: rgba(245, 158, 11, 0.19); }
+        .alert-mid { background: rgba(255, 250, 241, 0.92); border-color: rgba(249, 115, 22, 0.19); }
         .alert-mid::before { background: var(--orange); }
-        .alert-low { background: rgba(245, 249, 255, 0.94); border-color: rgba(91, 124, 250, 0.16); }
+        .alert-low { background: rgba(245, 249, 255, 0.94); border-color: rgba(79, 107, 255, 0.16); }
         .alert-low::before { background: var(--blue); }
         .alert-title { color: var(--ink); font-size: 15px; font-weight: 750; }
         .alert-line { color: #4f586d; font-size: 13px; line-height: 1.65; margin-top: 8px; }
         .alert-action { margin-top: 10px; padding: 10px 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.72); }
         .alert-meta { margin-top: 11px; color: var(--weak); font-size: 11px; }
         .tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 750; margin-left: 8px; }
-        .tag-high { background: rgba(224, 86, 91, 0.13); color: #c8454c; }
-        .tag-mid { background: rgba(245, 158, 11, 0.14); color: #b56c00; }
-        .tag-low { background: rgba(91, 124, 250, 0.12); color: #4867d8; }
+        .tag-high { background: rgba(239, 68, 68, 0.13); color: #dc2626; }
+        .tag-mid { background: rgba(249, 115, 22, 0.14); color: #c35e09; }
+        .tag-low { background: rgba(79, 107, 255, 0.12); color: #4057d6; }
 
         div[data-baseweb="tab-list"] {
             width: fit-content;
@@ -721,7 +779,7 @@ def inject_custom_css():
             gap: 5px;
             padding: 5px;
             border-radius: 8px;
-            background: rgba(229, 233, 242, 0.72);
+            background: rgba(235, 239, 248, 0.78);
             border: 1px solid rgba(123, 135, 158, 0.10);
         }
         button[data-baseweb="tab"] {
@@ -733,10 +791,11 @@ def inject_custom_css():
         }
         button[data-baseweb="tab"]:hover { background: rgba(255, 255, 255, 0.58); color: var(--ink); }
         button[data-baseweb="tab"][aria-selected="true"] {
-            color: var(--ink);
-            background: #ffffff;
-            box-shadow: 0 6px 16px rgba(31, 41, 55, 0.08);
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            box-shadow: 0 8px 20px rgba(79, 107, 255, 0.23);
         }
+        button[data-baseweb="tab"][aria-selected="true"] p { color: #ffffff !important; }
         button[data-baseweb="tab"] [data-testid="stMarkdownContainer"] p { font-size: 13px; }
         div[data-baseweb="tab-highlight"] { display: none; }
 
@@ -748,14 +807,14 @@ def inject_custom_css():
             color: #ffffff;
             font-weight: 700;
             background: linear-gradient(135deg, var(--blue), var(--purple));
-            box-shadow: 0 9px 20px rgba(91, 124, 250, 0.22);
+            box-shadow: 0 9px 20px rgba(79, 107, 255, 0.22);
             transition: transform 160ms ease, box-shadow 160ms ease;
         }
         .stButton > button:hover {
             color: #ffffff;
             border: 0;
             transform: translateY(-1px);
-            box-shadow: 0 12px 26px rgba(91, 124, 250, 0.28);
+            box-shadow: 0 12px 26px rgba(79, 107, 255, 0.28);
         }
         [data-testid="stAlert"] {
             border-radius: 8px;
@@ -805,16 +864,29 @@ def inject_custom_css():
             box-shadow: 0 14px 34px rgba(31, 41, 55, 0.055);
         }
         .login-atmosphere {
+            position: relative;
+            overflow: hidden;
             min-height: 530px;
             padding: 54px;
             border-radius: 8px;
-            background: linear-gradient(145deg, #4265df 0%, #6578e9 48%, #54b5d7 100%);
+            background:
+                linear-gradient(145deg, rgba(79,107,255,.96) 0%, rgba(110,91,233,.94) 47%, rgba(34,197,94,.82) 100%);
             color: white;
             box-shadow: 0 24px 60px rgba(61, 84, 173, 0.18);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
+        .login-atmosphere::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                repeating-linear-gradient(120deg, transparent 0 42px, rgba(255,255,255,.055) 43px 44px),
+                linear-gradient(22deg, transparent 0 64%, rgba(249,115,22,.13) 65% 69%, transparent 70%);
+            pointer-events: none;
+        }
+        .login-atmosphere > * { position: relative; z-index: 1; }
         .login-mark { font-size: 12px; font-weight: 750; opacity: 0.78; }
         .login-title { max-width: 560px; font-size: 43px; line-height: 1.12; font-weight: 780; margin-top: 90px; }
         .login-en { font-size: 14px; opacity: 0.76; margin-top: 14px; }
@@ -830,7 +902,7 @@ def inject_custom_css():
             background: rgba(255, 255, 255, 0.88);
             border: 1px solid rgba(255, 255, 255, 0.94) !important;
             border-radius: 8px;
-            box-shadow: 0 22px 54px rgba(31, 41, 55, 0.09);
+            box-shadow: 0 22px 54px rgba(79, 107, 255, 0.10), 0 8px 20px rgba(23,32,51,.05);
             backdrop-filter: blur(18px);
         }
         .st-key-view_controls,
@@ -847,7 +919,7 @@ def inject_custom_css():
         }
         @media (max-width: 900px) {
             .block-container { padding-left: 1rem; padding-right: 1rem; }
-            .main-title { font-size: 34px; }
+            .main-title { font-size: 28px; }
             .login-atmosphere { min-height: 360px; padding: 32px; }
             .login-title { margin-top: 46px; font-size: 34px; }
             .business-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1111,12 +1183,14 @@ def render_metric_card(
     delta_state: str = "flat",
     help_text: str | None = None,
     variant: str = "primary",
+    accent: str = "blue",
 ):
     delta_html = ""
     if delta is not None:
         delta_html = f'<div class="delta-{delta_state}">{delta}</div>'
     help_html = f'<div class="metric-help">{help_text}</div>' if help_text else ""
     card_class = "metric-card metric-secondary" if variant == "secondary" else "metric-card"
+    card_class = f"{card_class} accent-{accent}"
     st.markdown(
         f'<div class="{card_class}"><div class="metric-label">{escape(str(title))}</div>'
         f'<div class="metric-value">{escape(str(value))}</div>{delta_html}{help_html}</div>',
@@ -1171,8 +1245,8 @@ def require_password() -> bool:
                 <div>
                     <div class="login-mark">COMMERCE OPERATING INTELLIGENCE</div>
                     <div class="login-title">电商经营复盘看板</div>
-                    <div class="login-en">Ecommerce Intelligence Dashboard</div>
-                    <div class="login-copy">为日常经营复盘、趋势判断与渠道效率分析提供清晰视角。</div>
+                    <div class="login-en">Commerce Intelligence Dashboard</div>
+                    <div class="login-copy">追踪最护与碧维的日常经营表现，识别趋势、效率与风险。</div>
                     <div class="login-points">
                         <span class="login-point">双品牌经营总览</span>
                         <span class="login-point">日 / 月趋势追踪</span>
@@ -1200,33 +1274,36 @@ def require_password() -> bool:
 
 
 def render_dashboard_header():
-    left, right = st.columns([4.7, 1.3], gap="large", vertical_alignment="center")
-    with left:
-        st.markdown(
-            """
-            <div class="dashboard-hero">
-                <div class="hero-kicker">Commerce Operating Intelligence</div>
-                <div class="main-title">电商经营复盘看板</div>
-                <div class="subtle-note">
-                    最护和碧维是不同品类品牌，本看板展示各自经营状态，不做品牌输赢对比。<br>
-                    千川数据只作为投放补充分析，不默认计入总 GMV，避免和抖店重复。
+    with st.container(border=True, key="product_header"):
+        left, right = st.columns([4.7, 1.3], gap="large", vertical_alignment="center")
+        with left:
+            st.markdown(
+                """
+                <div class="header-brand-row">
+                    <div class="header-logo">BI</div>
+                    <div class="dashboard-hero">
+                        <div class="hero-kicker">Commerce Intelligence Dashboard</div>
+                        <div class="main-title">电商经营复盘看板</div>
+                        <div class="subtle-note">
+                            最护和碧维展示各自经营状态，不做品牌输赢对比。千川属于抖店投放体系，仅作补充分析。
+                        </div>
+                    </div>
                 </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        st.markdown(
-            """
-            <div class="status-row">
-                <span class="status-chip">数据源：Supabase</span>
-                <span class="status-chip">访问：BOSS View</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("刷新数据", key="refresh_data", use_container_width=True):
-            st.rerun()
+                """,
+                unsafe_allow_html=True,
+            )
+        with right:
+            st.markdown(
+                """
+                <div class="status-row">
+                    <span class="status-chip">Supabase</span>
+                    <span class="status-chip">BOSS View</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("刷新数据", key="refresh_data", use_container_width=True):
+                st.rerun()
 
 
 def render_chart(df: pd.DataFrame, y_col: str, title: str, formatter: str | None = None):
@@ -1284,14 +1361,21 @@ def render_bar(df: pd.DataFrame, y_col: str, title: str, formatter: str | None =
     if chart_df.empty:
         render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
+    if "platform" in chart_df.columns:
+        chart_df["系列"] = chart_df["brand"].astype(str) + "-" + chart_df["platform"].astype(str)
+        color_column = "系列"
+        bar_colors = {label: get_series_color(label) for label in chart_df["系列"].dropna().unique()}
+    else:
+        color_column = "brand"
+        bar_colors = {"最护": "#4F6BFF", "碧维": "#22C55E", "千川": "#8B5CF6"}
     fig = px.bar(
         chart_df,
         x="channel",
         y=y_col,
-        color="brand",
+        color=color_column,
         barmode="group",
         title=title,
-        color_discrete_map={"最护": "#2563EB", "碧维": "#F97316", "千川": "#9333EA"},
+        color_discrete_map=bar_colors,
     )
     fig.update_layout(
         height=360,
@@ -1333,7 +1417,7 @@ def render_date_controls(op_df: pd.DataFrame) -> tuple[pd.Timestamp | None, str,
         previous_date = get_previous_available_date(op_df, selected_date)
         compare_text = "本月累计暂无对比" if mode == "本月累计" else (str(pd.Timestamp(previous_date).date()) if previous_date is not None else "暂无对比")
         cols[4].markdown(
-            f'<div style="height:28px;"></div><div class="date-chip" style="background:rgba(91,124,250,.10);color:#4867d8;">当前 · {pd.Timestamp(selected_date).date()}</div>',
+            f'<div style="height:28px;"></div><div class="date-chip" style="background:rgba(79,107,255,.10);color:#4057d6;">当前 · {pd.Timestamp(selected_date).date()}</div>',
             unsafe_allow_html=True,
         )
         cols[5].markdown(f'<div style="height:28px;"></div><div class="date-chip">对比 · {escape(compare_text)}</div>', unsafe_allow_html=True)
@@ -1478,11 +1562,16 @@ def generate_alerts(op_df: pd.DataFrame) -> pd.DataFrame:
 
 def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_df: pd.DataFrame | None, mode: str):
     card_df = df[(df["brand"] == brand) & (df["platform"] == platform)] if not df.empty else pd.DataFrame()
+    brand_class = "brand-zuihu" if brand == "最护" else "brand-biwei"
+    platform_class = "platform-douyin" if platform == "抖店" else "platform-pdd"
     if card_df.empty:
         st.markdown(
             f"""
-            <div class="business-card">
-                <div class="business-head"><div class="business-name">{escape(brand)} · {escape(platform)}</div><span class="state-tag state-watch">暂无数据</span></div>
+            <div class="business-card {brand_class}">
+                <div class="business-head">
+                    <div class="business-title-group"><div class="business-name">{escape(brand)}</div><span class="platform-tag {platform_class}">{escape(platform)}</span></div>
+                    <span class="state-tag state-watch">暂无数据</span>
+                </div>
                 <div class="info-box" style="margin-top:26px;">所选日期暂无经营数据。</div>
             </div>
             """,
@@ -1522,9 +1611,9 @@ def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_d
     )
     st.markdown(
         f"""
-        <div class="business-card">
+        <div class="business-card {brand_class}">
             <div class="business-head">
-                <div class="business-name">{escape(brand)} · {escape(platform)}</div>
+                <div class="business-title-group"><div class="business-name">{escape(brand)}</div><span class="platform-tag {platform_class}">{escape(platform)}</span></div>
                 <span class="state-tag {status_class}">{status}</span>
             </div>
             <div class="business-gmv-label">GMV</div>
@@ -1564,22 +1653,22 @@ def render_boss_home(op_df: pd.DataFrame):
     st.markdown('<div class="section-title">核心指标</div>', unsafe_allow_html=True)
     cols = st.columns(4)
     with cols[0]:
-        render_metric_card("总 GMV", format_number(current.get("gmv")), help_text="不含千川，避免重复计算")
+        render_metric_card("总 GMV", format_number(current.get("gmv")), help_text="不含千川，避免重复计算", accent="blue")
     with cols[1]:
-        render_metric_card("总单量", format_number(current.get("orders")))
+        render_metric_card("总单量", format_number(current.get("orders")), accent="cyan")
     with cols[2]:
-        render_metric_card("总投放消耗", format_number(current.get("ad_spend")))
+        render_metric_card("总投放消耗", format_number(current.get("ad_spend")), accent="orange")
     with cols[3]:
-        render_metric_card("整体 ROI", format_roi(current.get("roi")))
+        render_metric_card("整体 ROI", format_roi(current.get("roi")), accent="green")
     cols = st.columns(4)
     with cols[0]:
-        render_metric_card("净 ROI", format_roi(current.get("net_roi")), variant="secondary")
+        render_metric_card("净 ROI", format_roi(current.get("net_roi")), variant="secondary", accent="purple")
     with cols[1]:
-        render_metric_card("退款率", format_percent(current.get("refund_rate")), variant="secondary")
+        render_metric_card("退款率", format_percent(current.get("refund_rate")), variant="secondary", accent="red")
     with cols[2]:
-        render_metric_card("较上一有数据日 GMV 变化", gmv_delta, delta_state=gmv_state, variant="secondary")
+        render_metric_card("较上一有数据日 GMV 变化", gmv_delta, delta_state=gmv_state, variant="secondary", accent="green" if gmv_state == "pos" else "red" if gmv_state == "neg" else "gray")
     with cols[3]:
-        render_metric_card("较上一有数据日 ROI 变化", roi_delta, delta_state=roi_state, variant="secondary")
+        render_metric_card("较上一有数据日 ROI 变化", roi_delta, delta_state=roi_state, variant="secondary", accent="green" if roi_state == "pos" else "red" if roi_state == "neg" else "gray")
 
     st.markdown('<div class="section-title">四个经营卡片</div>', unsafe_allow_html=True)
     rows = [[("最护", "抖店"), ("最护", "拼多多")], [("碧维", "抖店"), ("碧维", "拼多多")]]
@@ -1671,7 +1760,7 @@ def render_channel_analysis(op_df: pd.DataFrame):
         channel_summary = []
         for keys, group in channel_df.groupby(["brand", "channel"], dropna=False):
             row = aggregate_metrics(group)
-            row.update({"brand": keys[0], "channel": keys[1]})
+            row.update({"brand": keys[0], "platform": selected_platform, "channel": keys[1]})
             channel_summary.append(row)
         summary_df = pd.DataFrame(channel_summary)
         render_bar(summary_df, "gmv", "各渠道 GMV")
