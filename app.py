@@ -41,6 +41,86 @@ STANDARD_COLUMNS = [
 
 DISPLAY_COLUMNS = STANDARD_COLUMNS.copy()
 
+COLOR_PALETTE = {
+    "最护-抖店": "#2563EB",
+    "最护-拼多多": "#059669",
+    "碧维-抖店": "#F97316",
+    "碧维-拼多多": "#16A34A",
+    "最护-抖店-整体": "#2563EB",
+    "最护-抖店-商品卡": "#7C3AED",
+    "最护-抖店-直播": "#0EA5E9",
+    "最护-抖店-短视频": "#6366F1",
+    "最护-抖店-店铺号商品卡": "#4F46E5",
+    "最护-抖店-洗脸巾直播": "#0891B2",
+    "最护-拼多多-整体": "#1D4ED8",
+    "最护-拼多多-商品卡": "#10B981",
+    "最护-抖店-千川投放": "#9333EA",
+    "最护-抖店-千川·直播": "#9333EA",
+    "最护-抖店-千川·商品卡": "#A855F7",
+    "最护-抖店-千川·洗脸巾直播": "#DB2777",
+    "最护-抖店-千川·店铺号商品卡": "#C026D3",
+    "最护-抖店-千川·短视频": "#BE185D",
+    "碧维-抖店-整体": "#F97316",
+    "碧维-抖店-商品卡": "#EA580C",
+    "碧维-抖店-直播": "#FB923C",
+    "碧维-抖店-短视频": "#F59E0B",
+    "碧维-拼多多-整体": "#16A34A",
+    "碧维-拼多多-商品卡": "#22C55E",
+    "碧维-抖店-千川投放": "#DB2777",
+}
+
+FALLBACK_COLORS = [
+    "#2563EB",
+    "#F97316",
+    "#16A34A",
+    "#7C3AED",
+    "#DC2626",
+    "#0891B2",
+    "#CA8A04",
+    "#DB2777",
+    "#4F46E5",
+    "#059669",
+    "#EA580C",
+    "#9333EA",
+]
+
+
+def get_series_color(label: str) -> str:
+    normalized = str(label).strip()
+    if normalized in COLOR_PALETTE:
+        return COLOR_PALETTE[normalized]
+    if "千川" in normalized:
+        qianchuan_colors = ["#9333EA", "#A855F7", "#C026D3", "#DB2777", "#7E22CE", "#BE185D"]
+        checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
+        return qianchuan_colors[checksum % len(qianchuan_colors)]
+    if "拼多多" in normalized:
+        return "#059669" if normalized.startswith("最护-") else "#16A34A"
+    if normalized.startswith("最护-"):
+        cold_colors = ["#2563EB", "#7C3AED", "#0EA5E9", "#4F46E5", "#0891B2"]
+        checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
+        return cold_colors[checksum % len(cold_colors)]
+    if normalized.startswith("碧维-"):
+        warm_colors = ["#F97316", "#EA580C", "#FB923C", "#F59E0B", "#16A34A"]
+        checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
+        return warm_colors[checksum % len(warm_colors)]
+    checksum = sum((index + 1) * ord(char) for index, char in enumerate(normalized))
+    return FALLBACK_COLORS[checksum % len(FALLBACK_COLORS)]
+
+
+def get_qianchuan_channel_label(channel) -> str:
+    channel_text = str(channel).strip() if pd.notna(channel) else ""
+    if not channel_text or channel_text in {"整体", "千川"}:
+        return "千川投放"
+    return f"千川·{channel_text}"
+
+
+def get_series_label(brand, platform, channel) -> str:
+    brand_text = str(brand).strip()
+    platform_text = str(platform).strip()
+    if platform_text == "千川":
+        return f"{brand_text}-抖店-{get_qianchuan_channel_label(channel)}"
+    return f"{brand_text}-{platform_text}-{str(channel).strip()}"
+
 METRIC_ALIASES = {
     "gmv": ["GMV", "整体成交", "成交金额", "支付金额", "销售额"],
     "net_gmv": ["净成交", "净GMV", "净销售额"],
@@ -899,6 +979,73 @@ def aggregate_for_period(df: pd.DataFrame, period: str) -> pd.DataFrame:
     )
 
 
+def prepare_trend_chart_df(df: pd.DataFrame, period: str, view_mode: str) -> pd.DataFrame:
+    """Prepare trend series without averaging ratio metrics."""
+    if df is None or df.empty or "date" not in df.columns:
+        return pd.DataFrame(columns=STANDARD_COLUMNS + ["分组"])
+
+    working = df.copy()
+    working["date"] = pd.to_datetime(working["date"], errors="coerce").dt.normalize()
+    working = working.dropna(subset=["date"])
+    if working.empty:
+        return pd.DataFrame(columns=STANDARD_COLUMNS + ["分组"])
+
+    if period == "每周":
+        working["period_date"] = working["date"] - pd.to_timedelta(
+            working["date"].dt.weekday, unit="D"
+        )
+    elif period == "每月":
+        working["period_date"] = working["date"].dt.to_period("M").dt.to_timestamp()
+    else:
+        working["period_date"] = working["date"]
+
+    for column in ["brand", "platform", "channel"]:
+        if column not in working.columns:
+            working[column] = ""
+
+    detail_view = view_mode == "按渠道明细"
+    if detail_view:
+        working["display_platform"] = working["platform"].replace({"千川": "抖店"})
+        working["display_channel"] = working.apply(
+            lambda row: get_qianchuan_channel_label(row["channel"])
+            if row["platform"] == "千川"
+            else row["channel"],
+            axis=1,
+        )
+        group_columns = ["period_date", "brand", "display_platform", "display_channel"]
+    else:
+        # 千川是抖店投放补充数据，默认品牌平台趋势不重复汇总其成交。
+        working = working[working["platform"] != "千川"]
+        group_columns = ["period_date", "brand", "platform"]
+
+    rows = []
+    for keys, group in working.groupby(group_columns, dropna=False, sort=True):
+        if detail_view:
+            period_date, brand, platform, channel = keys
+            label = f"{brand}-{platform}-{channel}"
+        else:
+            period_date, brand, platform = keys
+            channel = "全部渠道"
+            label = f"{brand}-{platform}"
+        metrics = aggregate_metrics(group)
+        rows.append(
+            {
+                "date": pd.Timestamp(period_date),
+                "brand": brand,
+                "platform": platform,
+                "channel": channel,
+                "分组": label,
+                **metrics,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame(columns=STANDARD_COLUMNS + ["分组"])
+    return pd.DataFrame(rows).sort_values(
+        ["date", "brand", "platform", "channel"], ignore_index=True
+    )
+
+
 def get_available_dates(df: pd.DataFrame) -> list[pd.Timestamp]:
     if df.empty or "date" not in df.columns:
         return []
@@ -1087,11 +1234,14 @@ def render_chart(df: pd.DataFrame, y_col: str, title: str, formatter: str | None
     if chart_df.empty:
         render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
-    chart_df["分组"] = chart_df["brand"].astype(str) + "-" + chart_df["platform"].astype(str) + "-" + chart_df["channel"].astype(str)
-    group_colors = {
-        group: ("#5B7CFA" if str(group).startswith("最护-") else "#54C6EB")
-        for group in chart_df["分组"].dropna().unique()
-    }
+    if "分组" not in chart_df.columns:
+        chart_df["分组"] = chart_df.apply(
+            lambda row: get_series_label(row.get("brand", ""), row.get("platform", ""), row.get("channel", "")),
+            axis=1,
+        )
+    series_labels = [str(label) for label in chart_df["分组"].dropna().unique()]
+    color_discrete_map = {label: get_series_color(label) for label in series_labels}
+    many_series = len(series_labels) > 8
     fig = px.line(
         chart_df,
         x="date",
@@ -1099,22 +1249,31 @@ def render_chart(df: pd.DataFrame, y_col: str, title: str, formatter: str | None
         color="分组",
         markers=True,
         title=title,
-        color_discrete_map=group_colors,
+        color_discrete_map=color_discrete_map,
     )
     fig.update_layout(
-        height=370,
-        margin=dict(l=18, r=18, t=70, b=22),
+        height=460 if many_series else 430,
+        margin=dict(l=18, r=18, t=72, b=150 if many_series else 112),
         legend_title_text="",
         hovermode="x unified",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#6F778A", size=12),
+        font=dict(color="#7B8497", size=12),
         title=dict(font=dict(color="#1A1D29", size=17), x=0.02),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.22,
+            xanchor="left",
+            x=0,
+            font=dict(color="#5F687A", size=11),
+            traceorder="normal",
+        ),
+        hoverlabel=dict(bgcolor="#FFFFFF", bordercolor="#E9ECF3", font=dict(color="#1A1D29")),
     )
-    fig.update_xaxes(showgrid=False, zeroline=False, title_text="")
-    fig.update_yaxes(gridcolor="rgba(123,135,158,0.12)", zeroline=False, title_text="")
-    fig.update_traces(line=dict(width=2.5), marker=dict(size=6, line=dict(width=1, color="#ffffff")))
+    fig.update_xaxes(showgrid=False, zeroline=False, title_text="", tickfont=dict(color="#7B8497"))
+    fig.update_yaxes(gridcolor="#E9ECF3", zeroline=False, title_text="", tickfont=dict(color="#7B8497"))
+    fig.update_traces(line=dict(width=3), marker=dict(size=5, line=dict(width=1, color="#ffffff")))
     if formatter == "percent":
         fig.update_yaxes(tickformat=".1%")
     st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
@@ -1132,7 +1291,7 @@ def render_bar(df: pd.DataFrame, y_col: str, title: str, formatter: str | None =
         color="brand",
         barmode="group",
         title=title,
-        color_discrete_map={"最护": "#5B7CFA", "碧维": "#54C6EB"},
+        color_discrete_map={"最护": "#2563EB", "碧维": "#F97316", "千川": "#9333EA"},
     )
     fig.update_layout(
         height=360,
@@ -1140,12 +1299,12 @@ def render_bar(df: pd.DataFrame, y_col: str, title: str, formatter: str | None =
         legend_title_text="",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#6F778A", size=12),
+        font=dict(color="#7B8497", size=12),
         title=dict(font=dict(color="#1A1D29", size=17), x=0.02),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    fig.update_xaxes(showgrid=False, zeroline=False, title_text="")
-    fig.update_yaxes(gridcolor="rgba(123,135,158,0.12)", zeroline=False, title_text="")
+    fig.update_xaxes(showgrid=False, zeroline=False, title_text="", tickfont=dict(color="#7B8497"))
+    fig.update_yaxes(gridcolor="#E9ECF3", zeroline=False, title_text="", tickfont=dict(color="#7B8497"))
     fig.update_traces(marker_line_width=0, marker_cornerradius=5)
     if formatter == "percent":
         fig.update_yaxes(tickformat=".1%")
@@ -1447,18 +1606,37 @@ def render_trends(op_df: pd.DataFrame):
     max_date = op_df["date"].max().date()
     with st.container(border=True, key="trend_filters"):
         st.markdown('<div class="section-title" style="margin:2px 0 12px;">分析筛选</div>', unsafe_allow_html=True)
-        cols = st.columns(5, gap="medium")
+        cols = st.columns([1.55, 0.9, 0.9, 1.15, 0.9], gap="medium")
         date_range = cols[0].date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
         brand = cols[1].selectbox("品牌", ["全部", "最护", "碧维"])
-        platform = cols[2].selectbox("平台", ["全部", "抖店", "拼多多", "千川"])
-        channel = cols[3].selectbox("渠道", ["全部", "整体", "商品卡", "直播", "短视频", "千川"])
+        platform = cols[2].selectbox("平台", ["全部", "抖店", "拼多多"])
+        view_mode = cols[3].selectbox("展示维度", ["按品牌平台", "按渠道明细"])
         period = cols[4].selectbox("趋势粒度", ["每日", "每周", "每月"])
+        channel = "全部"
+        if view_mode == "按渠道明细":
+            channel_col, _ = st.columns([1.15, 3.85], gap="medium")
+            channel = channel_col.selectbox("渠道", ["全部", "整体", "商品卡", "直播", "短视频", "千川"], key="trend_channel")
 
-    filtered = filter_df(op_df, brand, platform, channel, date_range)
+    filtered = filter_df(op_df, brand, "全部", "全部", date_range)
+    if platform == "抖店":
+        filtered = filtered[filtered["platform"].isin(["抖店", "千川"])]
+    elif platform == "拼多多":
+        filtered = filtered[filtered["platform"] == "拼多多"]
+    if view_mode == "按渠道明细" and channel != "全部":
+        if channel == "千川":
+            filtered = filtered[filtered["platform"] == "千川"]
+        else:
+            filtered = filtered[filtered["channel"] == channel]
     if filtered.empty:
         render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
-    trend_df = aggregate_for_period(filtered, period)
+    trend_df = prepare_trend_chart_df(filtered, period, view_mode)
+    series_count = trend_df["分组"].nunique() if "分组" in trend_df.columns else 0
+    if series_count > 8:
+        render_info_box(
+            "当前线条较多，建议选择具体品牌、平台或渠道查看。",
+            title=f"当前展示 {series_count} 条趋势线",
+        )
     render_chart(trend_df, "gmv", f"GMV {period}趋势")
     render_chart(trend_df, "orders", f"单量 {period}走势")
     render_chart(trend_df, "ad_spend", f"投放消耗 {period}变化")
@@ -1501,7 +1679,7 @@ def render_channel_analysis(op_df: pd.DataFrame):
         render_bar(summary_df, "refund_rate", "各渠道退款率", formatter="percent")
 
     st.markdown('<div class="section-title">千川投放补充分析</div>', unsafe_allow_html=True)
-    render_info_box("千川只作为投放补充，不与抖店 GMV 合并计算。", title="独立投放视角")
+    render_info_box("千川属于抖店投放体系，仅作补充分析，不与抖店 GMV 合并计算。", title="抖店投放补充")
     qianchuan_df = filtered[filtered["platform"] == "千川"].copy()
     if qianchuan_df.empty:
         render_info_box("暂无千川数据")
