@@ -1645,27 +1645,29 @@ def render_trends(op_df: pd.DataFrame):
 
 
 def render_channel_analysis(op_df: pd.DataFrame):
-    render_page_heading("渠道分析", "CHANNEL STRATEGY", "拆解抖店渠道表现，并独立观察千川投放效率。")
+    render_page_heading("渠道分析", "CHANNEL STRATEGY", "分别查看抖店与拼多多的渠道规模和经营效率。")
     if op_df.empty:
         render_info_box("暂无历史数据，请管理员在后台导入数据。")
         return
     min_date = op_df["date"].min().date()
     max_date = op_df["date"].max().date()
     with st.container(border=True, key="channel_filters"):
-        st.markdown('<div class="section-title" style="margin:2px 0 4px;">抖店渠道经营视角</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-subtitle">对比整体、商品卡、直播与短视频的规模和效率。</div>', unsafe_allow_html=True)
-        date_range = st.date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="channel_date_range")
+        st.markdown('<div class="section-title" style="margin:2px 0 4px;">平台渠道视角</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-subtitle">选择平台后，对比该平台已有渠道的规模和效率。</div>', unsafe_allow_html=True)
+        filter_cols = st.columns([1.6, 1, 2.4], gap="medium")
+        date_range = filter_cols[0].date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="channel_date_range")
+        selected_platform = filter_cols[1].selectbox("分析平台", ["抖店", "拼多多"], key="channel_platform")
     filtered = filter_df(op_df, "全部", "全部", "全部", date_range)
     if filtered.empty:
         render_info_box("可尝试切换日期范围。", title="当前筛选条件下暂无数据")
         return
 
-    douyin_channels = ["整体", "商品卡", "直播", "短视频", "店铺号商品卡", "洗脸巾直播"]
-    douyin_df = filtered[(filtered["platform"] == "抖店") & (filtered["channel"].isin(douyin_channels))].copy()
-    if douyin_df.empty:
-        render_info_box("暂无抖店渠道数据")
+    platform_df = filtered[filtered["platform"] == selected_platform].copy()
+    st.markdown(f'<div class="section-title">{escape(selected_platform)}渠道表现</div>', unsafe_allow_html=True)
+    if platform_df.empty:
+        render_info_box(f"当前日期范围内暂无{selected_platform}渠道数据。")
     else:
-        channel_df = aggregate_for_period(douyin_df, "每日")
+        channel_df = aggregate_for_period(platform_df, "每日")
         channel_summary = []
         for keys, group in channel_df.groupby(["brand", "channel"], dropna=False):
             row = aggregate_metrics(group)
@@ -1678,17 +1680,18 @@ def render_channel_analysis(op_df: pd.DataFrame):
         render_bar(summary_df, "roi", "各渠道 ROI")
         render_bar(summary_df, "refund_rate", "各渠道退款率", formatter="percent")
 
-    st.markdown('<div class="section-title">千川投放补充分析</div>', unsafe_allow_html=True)
-    render_info_box("千川属于抖店投放体系，仅作补充分析，不与抖店 GMV 合并计算。", title="抖店投放补充")
-    qianchuan_df = filtered[filtered["platform"] == "千川"].copy()
-    if qianchuan_df.empty:
-        render_info_box("暂无千川数据")
-    else:
-        render_chart(qianchuan_df, "gmv", "千川成交趋势")
-        render_chart(qianchuan_df, "net_gmv", "千川净成交趋势")
-        render_chart(qianchuan_df, "ad_spend", "千川消耗趋势")
-        render_chart(qianchuan_df, "roi", "千川 ROI 趋势")
-        render_chart(qianchuan_df, "net_roi", "千川净 ROI 趋势")
+    if selected_platform == "抖店":
+        st.markdown('<div class="section-title">千川投放补充分析</div>', unsafe_allow_html=True)
+        render_info_box("千川属于抖店投放体系，仅作补充分析，不与抖店 GMV 合并计算。", title="抖店投放补充")
+        qianchuan_df = filtered[filtered["platform"] == "千川"].copy()
+        if qianchuan_df.empty:
+            render_info_box("暂无千川数据")
+        else:
+            render_chart(qianchuan_df, "gmv", "千川成交趋势")
+            render_chart(qianchuan_df, "net_gmv", "千川净成交趋势")
+            render_chart(qianchuan_df, "ad_spend", "千川消耗趋势")
+            render_chart(qianchuan_df, "roi", "千川 ROI 趋势")
+            render_chart(qianchuan_df, "net_roi", "千川净 ROI 趋势")
 
 
 def severity_class(severity: str) -> tuple[str, str]:
