@@ -1075,7 +1075,6 @@ if __name__ == "__main__":
     main()
     "click_to_order_rate",
     "commission",
-]
 
 DISPLAY_COLUMNS = STANDARD_COLUMNS.copy()
 
