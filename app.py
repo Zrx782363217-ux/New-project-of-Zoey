@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import os
 from datetime import date
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -443,47 +444,334 @@ def inject_custom_css():
     st.markdown(
         """
         <style>
-        .block-container { padding-top: 1.6rem; padding-bottom: 2rem; }
-        .main-title { font-size: 30px; font-weight: 700; color: #111827; margin-bottom: 4px; }
-        .subtle-note { color: #6b7280; font-size: 14px; line-height: 1.6; margin-bottom: 14px; }
+        :root {
+            --page: #f6f7fb;
+            --surface: rgba(255, 255, 255, 0.88);
+            --surface-strong: #ffffff;
+            --ink: #1a1d29;
+            --muted: #6f778a;
+            --weak: #9aa3b2;
+            --line: rgba(123, 135, 158, 0.16);
+            --blue: #5b7cfa;
+            --purple: #8f7cff;
+            --cyan: #54c6eb;
+            --green: #12a66a;
+            --red: #e0565b;
+            --orange: #f59e0b;
+        }
+        html, body, [class*="css"] {
+            font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--ink);
+            letter-spacing: 0;
+        }
+        .stApp {
+            background:
+                linear-gradient(135deg, rgba(91, 124, 250, 0.08) 0%, transparent 28%),
+                linear-gradient(225deg, rgba(84, 198, 235, 0.07) 0%, transparent 24%),
+                var(--page);
+        }
+        [data-testid="stHeader"] { background: transparent; }
+        .block-container {
+            max-width: 1440px;
+            padding-top: 1.7rem;
+            padding-bottom: 4rem;
+        }
+        .dashboard-hero {
+            padding: 18px 0 22px;
+        }
+        .hero-kicker {
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 750;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .main-title {
+            color: var(--ink);
+            font-size: clamp(34px, 4vw, 50px);
+            line-height: 1.08;
+            font-weight: 780;
+            margin: 0 0 12px;
+        }
+        .subtle-note {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.75;
+            max-width: 820px;
+        }
+        .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 14px; }
+        .status-chip, .date-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.76);
+            border: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 650;
+        }
+        .status-chip::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            margin-right: 7px;
+            box-shadow: 0 0 0 3px rgba(18, 166, 106, 0.10);
+        }
+        .page-heading { margin: 26px 0 16px; }
+        .page-eyebrow { color: var(--blue); font-size: 11px; font-weight: 750; margin-bottom: 6px; }
+        .page-title { color: var(--ink); font-size: 25px; line-height: 1.25; font-weight: 760; }
+        .page-description { color: var(--muted); font-size: 13px; margin-top: 6px; }
+        .section-title {
+            color: var(--ink);
+            font-size: 18px;
+            font-weight: 740;
+            margin: 28px 0 12px;
+        }
+        .section-subtitle { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
         .metric-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 16px 18px;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-            min-height: 112px;
-            margin-bottom: 12px;
-        }
-        .metric-label { color: #6b7280; font-size: 13px; margin-bottom: 8px; }
-        .metric-value { color: #111827; font-size: 27px; font-weight: 750; line-height: 1.25; }
-        .metric-help { color: #9ca3af; font-size: 12px; margin-top: 6px; }
-        .delta-pos { color: #059669; font-size: 13px; font-weight: 650; margin-top: 8px; }
-        .delta-neg { color: #dc2626; font-size: 13px; font-weight: 650; margin-top: 8px; }
-        .delta-flat { color: #6b7280; font-size: 13px; font-weight: 650; margin-top: 8px; }
-        .section-title { color: #111827; font-size: 19px; font-weight: 700; margin: 18px 0 10px 0; }
-        .info-box {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 14px 16px;
+            position: relative;
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.88);
+            border-radius: 8px;
+            padding: 20px 20px 18px;
+            box-shadow: 0 16px 38px rgba(31, 41, 55, 0.07);
+            backdrop-filter: blur(18px);
+            min-height: 132px;
             margin-bottom: 14px;
-            color: #374151;
         }
+        .metric-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 3px;
+            background: linear-gradient(180deg, var(--blue), var(--cyan));
+            opacity: 0.72;
+        }
+        .metric-card.metric-secondary { min-height: 118px; box-shadow: 0 10px 26px rgba(31, 41, 55, 0.055); }
+        .metric-label { color: var(--muted); font-size: 12px; font-weight: 650; margin-bottom: 12px; }
+        .metric-value { color: var(--ink); font-size: 31px; font-weight: 780; line-height: 1.12; }
+        .metric-secondary .metric-value { font-size: 27px; }
+        .metric-help { color: var(--weak); font-size: 11px; margin-top: 9px; }
+        .delta-pos, .delta-neg, .delta-flat {
+            display: inline-flex;
+            margin-top: 10px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 750;
+        }
+        .delta-pos { color: #0c8b59; background: rgba(18, 166, 106, 0.10); }
+        .delta-neg { color: #c8454c; background: rgba(224, 86, 91, 0.10); }
+        .delta-flat { color: var(--muted); background: rgba(111, 119, 138, 0.09); }
+        .info-box {
+            background: linear-gradient(135deg, rgba(91, 124, 250, 0.07), rgba(84, 198, 235, 0.05));
+            border: 1px solid rgba(91, 124, 250, 0.13);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            color: #46506a;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+        .empty-title { color: var(--ink); font-size: 15px; font-weight: 730; margin-bottom: 4px; }
+        .empty-description { color: var(--muted); font-size: 13px; }
+        .business-card {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 22px;
+            box-shadow: 0 16px 38px rgba(31, 41, 55, 0.065);
+            backdrop-filter: blur(18px);
+            min-height: 292px;
+            margin-bottom: 16px;
+        }
+        .business-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+        .business-name { color: var(--ink); font-size: 17px; font-weight: 750; }
+        .business-gmv-label { color: var(--weak); font-size: 11px; margin-top: 22px; }
+        .business-gmv { color: var(--ink); font-size: 34px; line-height: 1.15; font-weight: 780; margin-top: 5px; }
+        .business-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 13px;
+            margin-top: 20px;
+            padding-top: 17px;
+            border-top: 1px solid var(--line);
+        }
+        .business-stat-label { color: var(--weak); font-size: 10px; margin-bottom: 4px; }
+        .business-stat-value { color: #34394a; font-size: 14px; font-weight: 720; word-break: break-word; }
+        .business-foot { color: var(--muted); font-size: 11px; margin-top: 18px; }
+        .state-tag { display: inline-flex; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 750; }
+        .state-normal { color: #0c8b59; background: rgba(18, 166, 106, 0.10); }
+        .state-watch { color: #b56c00; background: rgba(245, 158, 11, 0.12); }
+        .state-risk { color: #c8454c; background: rgba(224, 86, 91, 0.11); }
         .alert-card {
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            border: 1px solid #e5e7eb;
+            position: relative;
+            border-radius: 8px;
+            padding: 18px 20px 18px 22px;
+            margin-bottom: 14px;
+            border: 1px solid var(--line);
+            box-shadow: 0 10px 28px rgba(31, 41, 55, 0.045);
+            overflow: hidden;
         }
-        .alert-high { background: #fef2f2; border-color: #fecaca; }
-        .alert-mid { background: #fff7ed; border-color: #fed7aa; }
-        .alert-low { background: #eff6ff; border-color: #bfdbfe; }
-        .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-left: 8px; }
-        .tag-high { background: #dc2626; color: #fff; }
-        .tag-mid { background: #f97316; color: #fff; }
-        .tag-low { background: #2563eb; color: #fff; }
-        div[data-testid="stPlotlyChart"] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04); }
+        .alert-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; }
+        .alert-high { background: rgba(255, 247, 247, 0.92); border-color: rgba(224, 86, 91, 0.18); }
+        .alert-high::before { background: var(--red); }
+        .alert-mid { background: rgba(255, 250, 241, 0.92); border-color: rgba(245, 158, 11, 0.19); }
+        .alert-mid::before { background: var(--orange); }
+        .alert-low { background: rgba(245, 249, 255, 0.94); border-color: rgba(91, 124, 250, 0.16); }
+        .alert-low::before { background: var(--blue); }
+        .alert-title { color: var(--ink); font-size: 15px; font-weight: 750; }
+        .alert-line { color: #4f586d; font-size: 13px; line-height: 1.65; margin-top: 8px; }
+        .alert-action { margin-top: 10px; padding: 10px 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.72); }
+        .alert-meta { margin-top: 11px; color: var(--weak); font-size: 11px; }
+        .tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 750; margin-left: 8px; }
+        .tag-high { background: rgba(224, 86, 91, 0.13); color: #c8454c; }
+        .tag-mid { background: rgba(245, 158, 11, 0.14); color: #b56c00; }
+        .tag-low { background: rgba(91, 124, 250, 0.12); color: #4867d8; }
+
+        div[data-baseweb="tab-list"] {
+            width: fit-content;
+            max-width: 100%;
+            gap: 5px;
+            padding: 5px;
+            border-radius: 8px;
+            background: rgba(229, 233, 242, 0.72);
+            border: 1px solid rgba(123, 135, 158, 0.10);
+        }
+        button[data-baseweb="tab"] {
+            height: 42px;
+            padding: 0 18px;
+            border-radius: 6px;
+            color: var(--muted);
+            font-weight: 650;
+        }
+        button[data-baseweb="tab"]:hover { background: rgba(255, 255, 255, 0.58); color: var(--ink); }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: var(--ink);
+            background: #ffffff;
+            box-shadow: 0 6px 16px rgba(31, 41, 55, 0.08);
+        }
+        button[data-baseweb="tab"] [data-testid="stMarkdownContainer"] p { font-size: 13px; }
+        div[data-baseweb="tab-highlight"] { display: none; }
+
+        .stButton > button {
+            min-height: 44px;
+            border: 0;
+            border-radius: 8px;
+            padding: 0 18px;
+            color: #ffffff;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            box-shadow: 0 9px 20px rgba(91, 124, 250, 0.22);
+            transition: transform 160ms ease, box-shadow 160ms ease;
+        }
+        .stButton > button:hover {
+            color: #ffffff;
+            border: 0;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 26px rgba(91, 124, 250, 0.28);
+        }
+        [data-testid="stAlert"] {
+            border-radius: 8px;
+            border: 1px solid rgba(245, 158, 11, 0.20);
+            background: rgba(255, 249, 225, 0.94);
+            color: #765700;
+        }
+        [data-testid="stAlert"] * { color: inherit !important; }
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        [data-testid="stDateInput"] div[data-baseweb="input"] > div {
+            min-height: 48px;
+            border-radius: 8px;
+            border-color: rgba(123, 135, 158, 0.22);
+            background: rgba(255, 255, 255, 0.90) !important;
+        }
+        [data-testid="stWidgetLabel"] p { color: var(--muted) !important; font-size: 12px; font-weight: 650; }
+        div[data-baseweb="select"] div,
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] input,
+        div[data-baseweb="input"] input,
+        [data-testid="stDateInput"] input {
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
+        }
+        div[data-baseweb="select"] svg { fill: var(--muted); }
+        div[data-testid="stRadio"] > div { gap: 8px; }
+        div[data-testid="stRadio"] label {
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.62);
+        }
+        div[data-testid="stRadio"] label p { color: #34394a !important; font-size: 12px; }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.88);
+            border-radius: 8px;
+            box-shadow: 0 14px 34px rgba(31, 41, 55, 0.055);
+            backdrop-filter: blur(18px);
+        }
+        div[data-testid="stPlotlyChart"] {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.92);
+            border-radius: 8px;
+            padding: 8px 10px 2px;
+            margin-bottom: 14px;
+            box-shadow: 0 14px 34px rgba(31, 41, 55, 0.055);
+        }
+        .login-atmosphere {
+            min-height: 530px;
+            padding: 54px;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #4265df 0%, #6578e9 48%, #54b5d7 100%);
+            color: white;
+            box-shadow: 0 24px 60px rgba(61, 84, 173, 0.18);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .login-mark { font-size: 12px; font-weight: 750; opacity: 0.78; }
+        .login-title { max-width: 560px; font-size: 43px; line-height: 1.12; font-weight: 780; margin-top: 90px; }
+        .login-en { font-size: 14px; opacity: 0.76; margin-top: 14px; }
+        .login-copy { max-width: 520px; font-size: 14px; line-height: 1.8; opacity: 0.82; margin-top: 28px; }
+        .login-points { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 28px; }
+        .login-point { padding: 7px 10px; border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; background: rgba(255,255,255,0.10); font-size: 11px; }
+        .login-form-title { color: var(--ink); font-size: 25px; font-weight: 760; margin-top: 28px; }
+        .login-form-copy { color: var(--muted); font-size: 13px; margin: 7px 0 28px; }
+        .login-foot { color: var(--weak); font-size: 11px; margin-top: 20px; }
+        .st-key-login_card {
+            min-height: 530px;
+            padding: 34px 30px !important;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.94) !important;
+            border-radius: 8px;
+            box-shadow: 0 22px 54px rgba(31, 41, 55, 0.09);
+            backdrop-filter: blur(18px);
+        }
+        .st-key-view_controls,
+        .st-key-trend_filters,
+        .st-key-channel_filters,
+        .st-key-alert_filters {
+            padding: 18px 20px 14px !important;
+            margin-bottom: 16px;
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.92) !important;
+            border-radius: 8px;
+            box-shadow: 0 14px 34px rgba(31, 41, 55, 0.055);
+            backdrop-filter: blur(18px);
+        }
+        @media (max-width: 900px) {
+            .block-container { padding-left: 1rem; padding-right: 1rem; }
+            .main-title { font-size: 34px; }
+            .login-atmosphere { min-height: 360px; padding: 32px; }
+            .login-title { margin-top: 46px; font-size: 34px; }
+            .business-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -669,26 +957,45 @@ def filter_df(
     return working
 
 
-def render_metric_card(title: str, value: str, delta: str | None = None, delta_state: str = "flat", help_text: str | None = None):
+def render_metric_card(
+    title: str,
+    value: str,
+    delta: str | None = None,
+    delta_state: str = "flat",
+    help_text: str | None = None,
+    variant: str = "primary",
+):
     delta_html = ""
     if delta is not None:
         delta_html = f'<div class="delta-{delta_state}">{delta}</div>'
     help_html = f'<div class="metric-help">{help_text}</div>' if help_text else ""
+    card_class = "metric-card metric-secondary" if variant == "secondary" else "metric-card"
     st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-label">{title}</div>
-            <div class="metric-value">{value}</div>
-            {delta_html}
-            {help_html}
-        </div>
-        """,
+        f'<div class="{card_class}"><div class="metric-label">{escape(str(title))}</div>'
+        f'<div class="metric-value">{escape(str(value))}</div>{delta_html}{help_html}</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_info_box(text: str):
-    st.markdown(f'<div class="info-box">{text}</div>', unsafe_allow_html=True)
+def render_info_box(text: str, title: str | None = None):
+    title_html = f'<div class="empty-title">{escape(title)}</div>' if title else ""
+    st.markdown(
+        f'<div class="info-box">{title_html}<div class="empty-description">{escape(text)}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_page_heading(title: str, eyebrow: str, description: str):
+    st.markdown(
+        f"""
+        <div class="page-heading">
+            <div class="page-eyebrow">{escape(eyebrow)}</div>
+            <div class="page-title">{escape(title)}</div>
+            <div class="page-description">{escape(description)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def get_app_password() -> str:
@@ -709,41 +1016,140 @@ def require_password() -> bool:
     if st.session_state.get("authenticated"):
         return True
 
-    st.subheader("访问验证")
-    entered = st.text_input("请输入访问密码", type="password")
-    if st.button("进入看板"):
-        if entered == password:
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("密码不正确")
+    left, right = st.columns([1.2, 0.8], gap="large", vertical_alignment="center")
+    with left:
+        st.markdown(
+            """
+            <div class="login-atmosphere">
+                <div>
+                    <div class="login-mark">COMMERCE OPERATING INTELLIGENCE</div>
+                    <div class="login-title">电商经营复盘看板</div>
+                    <div class="login-en">Ecommerce Intelligence Dashboard</div>
+                    <div class="login-copy">为日常经营复盘、趋势判断与渠道效率分析提供清晰视角。</div>
+                    <div class="login-points">
+                        <span class="login-point">双品牌经营总览</span>
+                        <span class="login-point">日 / 月趋势追踪</span>
+                        <span class="login-point">渠道效率复盘</span>
+                    </div>
+                </div>
+                <div class="login-mark">INTERNAL BUSINESS VIEW</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        with st.container(border=True, key="login_card"):
+            st.markdown('<div class="login-form-title">欢迎进入 BOSS 看板</div>', unsafe_allow_html=True)
+            st.markdown('<div class="login-form-copy">请输入访问密码</div>', unsafe_allow_html=True)
+            entered = st.text_input("访问密码", type="password", label_visibility="collapsed", key="login_password")
+            if st.button("进入看板", key="login_submit", use_container_width=True):
+                if entered == password:
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("密码不正确，请重新输入。")
+            st.markdown('<div class="login-foot">内部经营数据，仅限授权访问</div>', unsafe_allow_html=True)
     return False
+
+
+def render_dashboard_header():
+    left, right = st.columns([4.7, 1.3], gap="large", vertical_alignment="center")
+    with left:
+        st.markdown(
+            """
+            <div class="dashboard-hero">
+                <div class="hero-kicker">Commerce Operating Intelligence</div>
+                <div class="main-title">电商经营复盘看板</div>
+                <div class="subtle-note">
+                    最护和碧维是不同品类品牌，本看板展示各自经营状态，不做品牌输赢对比。<br>
+                    千川数据只作为投放补充分析，不默认计入总 GMV，避免和抖店重复。
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            """
+            <div class="status-row">
+                <span class="status-chip">数据源：Supabase</span>
+                <span class="status-chip">访问：BOSS View</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("刷新数据", key="refresh_data", use_container_width=True):
+            st.rerun()
 
 
 def render_chart(df: pd.DataFrame, y_col: str, title: str, formatter: str | None = None):
     chart_df = df.dropna(subset=[y_col]).copy() if y_col in df.columns else pd.DataFrame()
     if chart_df.empty:
-        render_info_box("当前筛选条件下暂无数据")
+        render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
     chart_df["分组"] = chart_df["brand"].astype(str) + "-" + chart_df["platform"].astype(str) + "-" + chart_df["channel"].astype(str)
-    fig = px.line(chart_df, x="date", y=y_col, color="分组", markers=True, title=title)
-    fig.update_layout(height=350, margin=dict(l=10, r=10, t=48, b=10), legend_title_text="", hovermode="x unified")
-    fig.update_traces(line=dict(width=2.4), marker=dict(size=6))
+    group_colors = {
+        group: ("#5B7CFA" if str(group).startswith("最护-") else "#54C6EB")
+        for group in chart_df["分组"].dropna().unique()
+    }
+    fig = px.line(
+        chart_df,
+        x="date",
+        y=y_col,
+        color="分组",
+        markers=True,
+        title=title,
+        color_discrete_map=group_colors,
+    )
+    fig.update_layout(
+        height=370,
+        margin=dict(l=18, r=18, t=70, b=22),
+        legend_title_text="",
+        hovermode="x unified",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#6F778A", size=12),
+        title=dict(font=dict(color="#1A1D29", size=17), x=0.02),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False, title_text="")
+    fig.update_yaxes(gridcolor="rgba(123,135,158,0.12)", zeroline=False, title_text="")
+    fig.update_traces(line=dict(width=2.5), marker=dict(size=6, line=dict(width=1, color="#ffffff")))
     if formatter == "percent":
         fig.update_yaxes(tickformat=".1%")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
 
 
 def render_bar(df: pd.DataFrame, y_col: str, title: str, formatter: str | None = None):
     chart_df = df.dropna(subset=[y_col]).copy() if y_col in df.columns else pd.DataFrame()
     if chart_df.empty:
-        render_info_box("当前筛选条件下暂无数据")
+        render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
-    fig = px.bar(chart_df, x="channel", y=y_col, color="brand", barmode="group", title=title)
-    fig.update_layout(height=340, margin=dict(l=10, r=10, t=48, b=10), legend_title_text="")
+    fig = px.bar(
+        chart_df,
+        x="channel",
+        y=y_col,
+        color="brand",
+        barmode="group",
+        title=title,
+        color_discrete_map={"最护": "#5B7CFA", "碧维": "#54C6EB"},
+    )
+    fig.update_layout(
+        height=360,
+        margin=dict(l=18, r=18, t=68, b=22),
+        legend_title_text="",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#6F778A", size=12),
+        title=dict(font=dict(color="#1A1D29", size=17), x=0.02),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False, title_text="")
+    fig.update_yaxes(gridcolor="rgba(123,135,158,0.12)", zeroline=False, title_text="")
+    fig.update_traces(marker_line_width=0, marker_cornerradius=5)
     if formatter == "percent":
         fig.update_yaxes(tickformat=".1%")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
 
 
 def render_date_controls(op_df: pd.DataFrame) -> tuple[pd.Timestamp | None, str, pd.Timestamp | None]:
@@ -754,19 +1160,24 @@ def render_date_controls(op_df: pd.DataFrame) -> tuple[pd.Timestamp | None, str,
     years = sorted({d.year for d in dates})
     default_year_index = years.index(latest.year)
 
-    cols = st.columns([1, 1, 1.2, 1.3, 1.7, 1.7])
-    year = cols[0].selectbox("年份", years, index=default_year_index)
-    months = sorted({d.month for d in dates if d.year == year})
-    default_month = latest.month if latest.year == year and latest.month in months else months[-1]
-    month = cols[1].selectbox("月份", months, index=months.index(default_month), format_func=lambda m: f"{m}月")
-    day_dates = [d for d in dates if d.year == year and d.month == month]
-    default_day = latest if latest in day_dates else day_dates[-1]
-    selected_date = cols[2].selectbox("日期", day_dates, index=day_dates.index(default_day), format_func=lambda d: pd.Timestamp(d).strftime("%Y-%m-%d"))
-    mode = cols[3].radio("查看口径", ["本日数据", "本月累计"], horizontal=True)
-    previous_date = get_previous_available_date(op_df, selected_date)
-    cols[4].markdown(f"**当前查看日期**  \n{pd.Timestamp(selected_date).date()}")
-    compare_text = "本月累计暂无对比" if mode == "本月累计" else (str(pd.Timestamp(previous_date).date()) if previous_date is not None else "暂无对比")
-    cols[5].markdown(f"**对比日期**  \n{compare_text}")
+    with st.container(border=True, key="view_controls"):
+        st.markdown('<div class="section-title" style="margin:2px 0 12px;">数据视角</div>', unsafe_allow_html=True)
+        cols = st.columns([0.8, 0.8, 1.15, 1.45, 1.15, 1.15], gap="medium", vertical_alignment="top")
+        year = cols[0].selectbox("年份", years, index=default_year_index)
+        months = sorted({d.month for d in dates if d.year == year})
+        default_month = latest.month if latest.year == year and latest.month in months else months[-1]
+        month = cols[1].selectbox("月份", months, index=months.index(default_month), format_func=lambda m: f"{m}月")
+        day_dates = [d for d in dates if d.year == year and d.month == month]
+        default_day = latest if latest in day_dates else day_dates[-1]
+        selected_date = cols[2].selectbox("日期", day_dates, index=day_dates.index(default_day), format_func=lambda d: pd.Timestamp(d).strftime("%Y-%m-%d"))
+        mode = cols[3].radio("查看口径", ["本日数据", "本月累计"], horizontal=True)
+        previous_date = get_previous_available_date(op_df, selected_date)
+        compare_text = "本月累计暂无对比" if mode == "本月累计" else (str(pd.Timestamp(previous_date).date()) if previous_date is not None else "暂无对比")
+        cols[4].markdown(
+            f'<div style="height:28px;"></div><div class="date-chip" style="background:rgba(91,124,250,.10);color:#4867d8;">当前 · {pd.Timestamp(selected_date).date()}</div>',
+            unsafe_allow_html=True,
+        )
+        cols[5].markdown(f'<div style="height:28px;"></div><div class="date-chip">对比 · {escape(compare_text)}</div>', unsafe_allow_html=True)
     return pd.Timestamp(selected_date), mode, previous_date
 
 
@@ -908,33 +1319,67 @@ def generate_alerts(op_df: pd.DataFrame) -> pd.DataFrame:
 
 def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_df: pd.DataFrame | None, mode: str):
     card_df = df[(df["brand"] == brand) & (df["platform"] == platform)] if not df.empty else pd.DataFrame()
-    with st.container(border=True):
-        st.markdown(f"#### {brand} - {platform}")
-        if card_df.empty:
-            st.info("暂无数据")
-            return
-        current = aggregate_metrics(card_df)
-        previous = aggregate_metrics(previous_df[(previous_df["brand"] == brand) & (previous_df["platform"] == platform)]) if previous_df is not None and not previous_df.empty else {}
-        gmv_delta, gmv_state = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("gmv"), previous.get("gmv"))
-        roi_delta, roi_state = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("roi"), previous.get("roi"))
-        cols = st.columns(3)
-        with cols[0]:
-            render_metric_card("GMV", format_number(current.get("gmv")), gmv_delta, gmv_state)
-        with cols[1]:
-            render_metric_card("单量", format_number(current.get("orders")))
-        with cols[2]:
-            render_metric_card("投放消耗", format_number(current.get("ad_spend")))
-        cols = st.columns(3)
-        with cols[0]:
-            render_metric_card("ROI", format_roi(current.get("roi")), roi_delta, roi_state)
-        with cols[1]:
-            render_metric_card("净 ROI", format_roi(current.get("net_roi")))
-        with cols[2]:
-            render_metric_card("退款率", format_percent(current.get("refund_rate")))
+    if card_df.empty:
+        st.markdown(
+            f"""
+            <div class="business-card">
+                <div class="business-head"><div class="business-name">{escape(brand)} · {escape(platform)}</div><span class="state-tag state-watch">暂无数据</span></div>
+                <div class="info-box" style="margin-top:26px;">所选日期暂无经营数据。</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    current = aggregate_metrics(card_df)
+    previous = aggregate_metrics(previous_df[(previous_df["brand"] == brand) & (previous_df["platform"] == platform)]) if previous_df is not None and not previous_df.empty else {}
+    gmv_delta, gmv_state = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("gmv"), previous.get("gmv"))
+    roi_delta, _ = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("roi"), previous.get("roi"))
+
+    current_gmv = safe_float(current.get("gmv"))
+    previous_gmv = safe_float(previous.get("gmv"))
+    gmv_change = None if current_gmv is None or previous_gmv in (None, 0) else (current_gmv - previous_gmv) / abs(previous_gmv)
+    roi = safe_float(current.get("roi"))
+    refund_rate = safe_float(current.get("refund_rate"))
+    if (roi is not None and roi < 1) or (refund_rate is not None and refund_rate > 0.10):
+        status, status_class, status_note = "风险", "state-risk", "效率或售后指标需要优先检查。"
+    elif gmv_change is not None and gmv_change < -0.10:
+        status, status_class, status_note = "关注", "state-watch", "成交出现波动，建议关注流量与转化承接。"
+    else:
+        status, status_class, status_note = "正常", "state-normal", "当前经营状态平稳，继续观察趋势变化。"
+
+    stats = [
+        ("单量", format_number(current.get("orders"))),
+        ("投放消耗", format_number(current.get("ad_spend"))),
+        ("ROI", format_roi(current.get("roi"))),
+        ("净 ROI", format_roi(current.get("net_roi"))),
+        ("退款率", format_percent(current.get("refund_rate"))),
+        ("GMV 变化", gmv_delta),
+        ("ROI 变化", roi_delta),
+    ]
+    stats_html = "".join(
+        f'<div><div class="business-stat-label">{escape(label)}</div><div class="business-stat-value">{escape(value)}</div></div>'
+        for label, value in stats
+    )
+    st.markdown(
+        f"""
+        <div class="business-card">
+            <div class="business-head">
+                <div class="business-name">{escape(brand)} · {escape(platform)}</div>
+                <span class="state-tag {status_class}">{status}</span>
+            </div>
+            <div class="business-gmv-label">GMV</div>
+            <div class="business-gmv">{escape(format_number(current.get("gmv")))}</div>
+            <div class="business-grid">{stats_html}</div>
+            <div class="business-foot">{escape(status_note)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_boss_home(op_df: pd.DataFrame):
-    st.subheader("BOSS首页")
+    render_page_heading("BOSS首页", "OPERATING OVERVIEW", "聚焦核心经营结果、效率变化与当日风险。")
     if op_df.empty:
         render_info_box("暂无历史数据，请管理员在后台导入数据。")
         return
@@ -946,7 +1391,7 @@ def render_boss_home(op_df: pd.DataFrame):
 
     current_df = filter_by_selected_date(op_df, selected_date, mode)
     if current_df.empty:
-        st.warning("当前日期暂无数据，请选择其他日期。")
+        render_info_box("请切换到其他有数据的日期。", title="当前日期暂无数据")
         return
     previous_df = filter_by_selected_date(op_df, previous_date, "本日数据") if previous_date is not None and mode == "本日数据" else pd.DataFrame()
 
@@ -969,13 +1414,13 @@ def render_boss_home(op_df: pd.DataFrame):
         render_metric_card("整体 ROI", format_roi(current.get("roi")))
     cols = st.columns(4)
     with cols[0]:
-        render_metric_card("净 ROI", format_roi(current.get("net_roi")))
+        render_metric_card("净 ROI", format_roi(current.get("net_roi")), variant="secondary")
     with cols[1]:
-        render_metric_card("退款率", format_percent(current.get("refund_rate")))
+        render_metric_card("退款率", format_percent(current.get("refund_rate")), variant="secondary")
     with cols[2]:
-        render_metric_card("较上一有数据日 GMV 变化", gmv_delta, delta_state=gmv_state)
+        render_metric_card("较上一有数据日 GMV 变化", gmv_delta, delta_state=gmv_state, variant="secondary")
     with cols[3]:
-        render_metric_card("较上一有数据日 ROI 变化", roi_delta, delta_state=roi_state)
+        render_metric_card("较上一有数据日 ROI 变化", roi_delta, delta_state=roi_state, variant="secondary")
 
     st.markdown('<div class="section-title">四个经营卡片</div>', unsafe_allow_html=True)
     rows = [[("最护", "抖店"), ("最护", "拼多多")], [("碧维", "抖店"), ("碧维", "拼多多")]]
@@ -988,48 +1433,53 @@ def render_boss_home(op_df: pd.DataFrame):
     st.markdown('<div class="section-title">当前日期核心提醒</div>', unsafe_allow_html=True)
     alert_df = generate_alerts(current_df if mode == "本日数据" else current_df[current_df["date"] == selected_date])
     if alert_df.empty:
-        render_info_box("当前日期暂无明显异常")
+        render_info_box("经营状态整体平稳，可继续观察趋势变化。", title="当前日期暂无明显异常")
     else:
         render_alert_cards(alert_df.head(3), compact=True)
 
 
 def render_trends(op_df: pd.DataFrame):
-    st.subheader("历史趋势")
+    render_page_heading("历史趋势", "TREND WORKSPACE", "按日期、品牌、平台与渠道观察经营变化。")
     if op_df.empty:
         render_info_box("暂无历史数据，请管理员在后台导入数据。")
         return
     min_date = op_df["date"].min().date()
     max_date = op_df["date"].max().date()
-    cols = st.columns(5)
-    date_range = cols[0].date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-    brand = cols[1].selectbox("品牌", ["全部", "最护", "碧维"])
-    platform = cols[2].selectbox("平台", ["全部", "抖店", "拼多多", "千川"])
-    channel = cols[3].selectbox("渠道", ["全部", "整体", "商品卡", "直播", "短视频", "千川"])
-    period = cols[4].selectbox("趋势粒度", ["每日", "每周", "每月"])
+    with st.container(border=True, key="trend_filters"):
+        st.markdown('<div class="section-title" style="margin:2px 0 12px;">分析筛选</div>', unsafe_allow_html=True)
+        cols = st.columns(5, gap="medium")
+        date_range = cols[0].date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+        brand = cols[1].selectbox("品牌", ["全部", "最护", "碧维"])
+        platform = cols[2].selectbox("平台", ["全部", "抖店", "拼多多", "千川"])
+        channel = cols[3].selectbox("渠道", ["全部", "整体", "商品卡", "直播", "短视频", "千川"])
+        period = cols[4].selectbox("趋势粒度", ["每日", "每周", "每月"])
 
     filtered = filter_df(op_df, brand, platform, channel, date_range)
     if filtered.empty:
-        render_info_box("当前筛选条件下暂无数据")
+        render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
         return
     trend_df = aggregate_for_period(filtered, period)
     render_chart(trend_df, "gmv", f"GMV {period}趋势")
-    render_chart(trend_df, "orders", f"单量 {period}趋势")
-    render_chart(trend_df, "ad_spend", f"投放消耗 {period}趋势")
-    render_chart(trend_df, "roi", f"ROI {period}趋势")
-    render_chart(trend_df, "refund_rate", f"退款率 {period}趋势", formatter="percent")
+    render_chart(trend_df, "orders", f"单量 {period}走势")
+    render_chart(trend_df, "ad_spend", f"投放消耗 {period}变化")
+    render_chart(trend_df, "roi", f"ROI {period}效率走势")
+    render_chart(trend_df, "refund_rate", f"退款率 {period}走势", formatter="percent")
 
 
 def render_channel_analysis(op_df: pd.DataFrame):
-    st.subheader("渠道分析")
+    render_page_heading("渠道分析", "CHANNEL STRATEGY", "拆解抖店渠道表现，并独立观察千川投放效率。")
     if op_df.empty:
         render_info_box("暂无历史数据，请管理员在后台导入数据。")
         return
     min_date = op_df["date"].min().date()
     max_date = op_df["date"].max().date()
-    date_range = st.date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="channel_date_range")
+    with st.container(border=True, key="channel_filters"):
+        st.markdown('<div class="section-title" style="margin:2px 0 4px;">抖店渠道经营视角</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-subtitle">对比整体、商品卡、直播与短视频的规模和效率。</div>', unsafe_allow_html=True)
+        date_range = st.date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="channel_date_range")
     filtered = filter_df(op_df, "全部", "全部", "全部", date_range)
     if filtered.empty:
-        render_info_box("当前筛选条件下暂无数据")
+        render_info_box("可尝试切换日期范围。", title="当前筛选条件下暂无数据")
         return
 
     douyin_channels = ["整体", "商品卡", "直播", "短视频", "店铺号商品卡", "洗脸巾直播"]
@@ -1051,7 +1501,7 @@ def render_channel_analysis(op_df: pd.DataFrame):
         render_bar(summary_df, "refund_rate", "各渠道退款率", formatter="percent")
 
     st.markdown('<div class="section-title">千川投放补充分析</div>', unsafe_allow_html=True)
-    st.caption("千川只作为投放补充分析，不与抖店 GMV 合并计算。")
+    render_info_box("千川只作为投放补充，不与抖店 GMV 合并计算。", title="独立投放视角")
     qianchuan_df = filtered[filtered["platform"] == "千川"].copy()
     if qianchuan_df.empty:
         render_info_box("暂无千川数据")
@@ -1077,34 +1527,35 @@ def render_alert_cards(alerts: pd.DataFrame, compact: bool = False):
         return
     for _, row in alerts.iterrows():
         box_class, tag_class = severity_class(str(row.get("严重程度", "低")))
-        details = "" if compact else f"<div><b>可能原因：</b>{row.get('可能原因', '')}</div><div><b>建议动作：</b>{row.get('建议动作', '')}</div>"
+        reason = escape(str(row.get("可能原因", "")))
+        action = escape(str(row.get("建议动作", "")))
+        details = "" if compact else f'<div class="alert-line"><b>可能原因</b> · {reason}</div>'
         st.markdown(
-            f"""
-            <div class="alert-card {box_class}">
-                <div><b>{row.get('标题', '')}</b><span class="tag {tag_class}">{row.get('严重程度', '')}</span></div>
-                <div style="margin-top:8px;"><b>数据依据：</b>{row.get('数据依据', '')}</div>
-                {details}
-                <div style="margin-top:8px;color:#6b7280;font-size:13px;">
-                    {row.get('brand', '')} / {row.get('platform', '')} / {row.get('channel', '')} / {row.get('date', '')}
-                </div>
-            </div>
-            """,
+            f'<div class="alert-card {box_class}">'
+            f'<div><span class="alert-title">{escape(str(row.get("标题", "")))}</span>'
+            f'<span class="tag {tag_class}">{escape(str(row.get("严重程度", "")))}</span></div>'
+            f'<div class="alert-line"><b>数据依据</b> · {escape(str(row.get("数据依据", "")))}</div>'
+            f'{details}<div class="alert-line alert-action"><b>建议动作</b> · {action}</div>'
+            f'<div class="alert-meta">{escape(str(row.get("brand", "")))} / {escape(str(row.get("platform", "")))} / '
+            f'{escape(str(row.get("channel", "")))} / {escape(str(row.get("date", "")))}</div></div>',
             unsafe_allow_html=True,
         )
 
 
 def render_alerts(op_df: pd.DataFrame):
-    st.subheader("自动复盘提醒")
+    render_page_heading("自动复盘提醒", "OPERATING ADVISOR", "基于经营指标变化识别风险与可放大的机会。")
     if op_df.empty:
         render_info_box("暂无历史数据，请管理员在后台导入数据。")
         return
     min_date = op_df["date"].min().date()
     max_date = op_df["date"].max().date()
-    date_range = st.date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="alert_date_range")
+    with st.container(border=True, key="alert_filters"):
+        st.markdown('<div class="section-title" style="margin:2px 0 10px;">提醒范围</div>', unsafe_allow_html=True)
+        date_range = st.date_input("日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date, key="alert_date_range")
     filtered = filter_df(op_df, "全部", "全部", "全部", date_range)
     alerts = generate_alerts(filtered)
     if alerts.empty:
-        render_info_box("当前筛选范围内暂无明显异常。")
+        render_info_box("可以继续观察 GMV、ROI 与退款率的变化趋势。", title="当前范围暂无明显异常")
         return
     severity_order = {"高": 0, "中": 1, "低": 2}
     alerts["排序"] = alerts["严重程度"].map(severity_order).fillna(9)
@@ -1115,31 +1566,27 @@ def render_alerts(op_df: pd.DataFrame):
 def main():
     st.set_page_config(page_title="电商经营复盘看板", layout="wide")
     inject_custom_css()
-    st.markdown('<div class="main-title">电商经营复盘看板</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="subtle-note">最护和碧维是不同品类品牌，本看板展示各自经营状态，不做品牌输赢对比。<br>千川数据只作为投放补充分析，不默认计入总 GMV，避免和抖店重复。</div>',
-        unsafe_allow_html=True,
-    )
 
     if not require_password():
         return
 
-    if st.button("刷新数据"):
-        st.rerun()
+    render_dashboard_header()
 
-    display_df, _history_message = load_history_from_database()
+    display_df, history_message = load_history_from_database()
 
     tab_home, tab_trend, tab_channel, tab_alert = st.tabs(["BOSS首页", "历史趋势", "渠道分析", "自动复盘提醒"])
 
     if display_df.empty:
+        empty_title = "数据库读取失败" if history_message.startswith("数据库读取失败") else "暂无历史数据"
+        empty_text = "请管理员检查连接配置。" if empty_title == "数据库读取失败" else "请管理员在后台导入数据。"
         with tab_home:
-            render_info_box("暂无历史数据，请管理员在后台导入数据。")
+            render_info_box(empty_text, title=empty_title)
         with tab_trend:
-            render_info_box("暂无历史数据，请管理员在后台导入数据。")
+            render_info_box(empty_text, title=empty_title)
         with tab_channel:
-            render_info_box("暂无历史数据，请管理员在后台导入数据。")
+            render_info_box(empty_text, title=empty_title)
         with tab_alert:
-            render_info_box("暂无历史数据，请管理员在后台导入数据。")
+            render_info_box(empty_text, title=empty_title)
         return
 
     with tab_home:
