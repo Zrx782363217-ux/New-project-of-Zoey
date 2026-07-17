@@ -8,8 +8,10 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
+from plotly.subplots import make_subplots
 
 from db import get_engine, init_db, load_daily_metrics
 
@@ -83,6 +85,14 @@ FALLBACK_COLORS = [
     "#EA580C",
     "#9333EA",
 ]
+
+COMBO_CHART_COLORS = {
+    "最护-抖店": ("#DCE5FF", "#4F6BFF"),
+    "最护-拼多多": ("#E9DDFF", "#8B5CF6"),
+    "碧维-抖店": ("#FFE4D1", "#F97316"),
+    "碧维-拼多多": ("#DDFBEA", "#22C55E"),
+    "千川": ("#F0D9FF", "#A855F7"),
+}
 
 
 def get_series_color(label: str) -> str:
@@ -1356,6 +1366,111 @@ def render_chart(df: pd.DataFrame, y_col: str, title: str, formatter: str | None
     st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["lasso2d", "select2d"]})
 
 
+def get_combo_chart_colors(color_key: str | None) -> tuple[str, str]:
+    normalized = str(color_key or "").strip()
+    if "千川" in normalized:
+        return COMBO_CHART_COLORS["千川"]
+    for key, colors in COMBO_CHART_COLORS.items():
+        if key != "千川" and normalized.startswith(key):
+            return colors
+    line_color = get_series_color(normalized or "GMV-ROI")
+    return line_color, line_color
+
+
+def render_gmv_roi_combo_chart(
+    df: pd.DataFrame,
+    title: str = "GMV 与 ROI 趋势",
+    color_key: str | None = None,
+):
+    if df is None or df.empty or "date" not in df.columns:
+        render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
+        return
+
+    chart_df = df.copy()
+    chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
+    for column in ["gmv", "roi"]:
+        if column not in chart_df.columns:
+            chart_df[column] = pd.NA
+        chart_df[column] = pd.to_numeric(chart_df[column], errors="coerce")
+    chart_df = chart_df.dropna(subset=["date"]).sort_values("date")
+    if chart_df.empty or (chart_df["gmv"].isna().all() and chart_df["roi"].isna().all()):
+        render_info_box("可尝试切换日期、品牌或平台。", title="当前筛选条件下暂无数据")
+        return
+
+    bar_color, line_color = get_combo_chart_colors(color_key)
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(
+        go.Bar(
+            x=chart_df["date"],
+            y=chart_df["gmv"],
+            name="GMV",
+            marker=dict(color=bar_color, line=dict(color=line_color, width=0.5)),
+            opacity=0.7,
+            hovertemplate="GMV：%{y:,.0f}<extra></extra>",
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=chart_df["date"],
+            y=chart_df["roi"],
+            name="ROI",
+            mode="lines+markers",
+            line=dict(color=line_color, width=3),
+            marker=dict(size=6, color=line_color, line=dict(color="#FFFFFF", width=1)),
+            connectgaps=False,
+            hovertemplate="ROI：%{y:.2f}<extra></extra>",
+        ),
+        secondary_y=True,
+    )
+    fig.update_layout(
+        title=dict(text=title, font=dict(color="#1A1D29", size=17), x=0.02),
+        height=460,
+        margin=dict(l=18, r=22, t=72, b=86),
+        hovermode="x unified",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#7B8497", size=12),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.14,
+            xanchor="left",
+            x=0,
+            font=dict(color="#5F687A", size=11),
+        ),
+        hoverlabel=dict(bgcolor="#FFFFFF", bordercolor="#E9ECF3", font=dict(color="#1A1D29")),
+        bargap=0.28,
+    )
+    fig.update_xaxes(
+        title_text="",
+        showgrid=False,
+        zeroline=False,
+        tickfont=dict(color="#7B8497"),
+    )
+    fig.update_yaxes(
+        title_text="GMV",
+        gridcolor="#E9ECF3",
+        zeroline=False,
+        tickformat=",.0f",
+        tickfont=dict(color="#7B8497"),
+        secondary_y=False,
+    )
+    fig.update_yaxes(
+        title_text="ROI",
+        showgrid=False,
+        zeroline=False,
+        tickformat=".2f",
+        tickfont=dict(color="#7B8497"),
+        secondary_y=True,
+    )
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={"displaylogo": False, "modeBarButtonsToRemove": ["lasso2d", "select2d"]},
+    )
+
+
 def render_bar(df: pd.DataFrame, y_col: str, title: str, formatter: str | None = None):
     chart_df = df.dropna(subset=[y_col]).copy() if y_col in df.columns else pd.DataFrame()
     if chart_df.empty:
@@ -1721,15 +1836,30 @@ def render_trends(op_df: pd.DataFrame):
         return
     trend_df = prepare_trend_chart_df(filtered, period, view_mode)
     series_count = trend_df["分组"].nunique() if "分组" in trend_df.columns else 0
-    if series_count > 8:
+    if view_mode == "按渠道明细" and series_count > 6:
         render_info_box(
-            "当前线条较多，建议选择具体品牌、平台或渠道查看。",
-            title=f"当前展示 {series_count} 条趋势线",
+            "当前渠道分组较多，建议选择具体品牌、平台或渠道查看 GMV 与 ROI 组合趋势。",
+            title=f"当前展示 {series_count} 个渠道分组",
         )
-    render_chart(trend_df, "gmv", f"GMV {period}趋势")
+
+    combo_groups = [str(label) for label in trend_df.get("分组", pd.Series(dtype=str)).dropna().unique()]
+    if not combo_groups:
+        render_gmv_roi_combo_chart(trend_df, f"GMV 与 ROI {period}趋势")
+    else:
+        st.markdown('<div class="section-title">GMV 与 ROI 趋势</div>', unsafe_allow_html=True)
+        for start in range(0, len(combo_groups), 2):
+            columns = st.columns(2, gap="large")
+            for column, group_label in zip(columns, combo_groups[start : start + 2]):
+                group_df = trend_df[trend_df["分组"].astype(str) == group_label].copy()
+                with column:
+                    render_gmv_roi_combo_chart(
+                        group_df,
+                        title=f"{group_label.replace('-', ' - ')}｜GMV 与 ROI 趋势",
+                        color_key=group_label,
+                    )
+
     render_chart(trend_df, "orders", f"单量 {period}走势")
     render_chart(trend_df, "ad_spend", f"投放消耗 {period}变化")
-    render_chart(trend_df, "roi", f"ROI {period}效率走势")
     render_chart(trend_df, "refund_rate", f"退款率 {period}走势", formatter="percent")
 
 
