@@ -873,16 +873,33 @@ def inject_custom_css():
             margin-bottom: 14px;
             box-shadow: 0 14px 34px rgba(31, 41, 55, 0.055);
         }
+        .st-key-login_page {
+            min-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 32px 0 48px;
+        }
+        .st-key-login_page > div[data-testid="stVerticalBlock"] {
+            width: 100%;
+        }
+        .st-key-login_page div[data-testid="stHorizontalBlock"] {
+            width: min(1180px, 100%);
+            margin: 0 auto;
+            align-items: stretch;
+        }
         .login-atmosphere {
             position: relative;
             overflow: hidden;
-            min-height: 530px;
-            padding: 54px;
-            border-radius: 8px;
+            min-height: 560px;
+            height: 100%;
+            padding: 56px;
+            border-radius: 28px;
             background:
-                linear-gradient(145deg, rgba(79,107,255,.96) 0%, rgba(110,91,233,.94) 47%, rgba(34,197,94,.82) 100%);
+                radial-gradient(circle at 84% 12%, rgba(255,255,255,.24), transparent 27%),
+                linear-gradient(145deg, #4f6bff 0%, #7359e8 52%, #22a863 100%);
             color: white;
-            box-shadow: 0 24px 60px rgba(61, 84, 173, 0.18);
+            box-shadow: 0 28px 70px rgba(61, 84, 173, 0.22);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -897,23 +914,73 @@ def inject_custom_css():
             pointer-events: none;
         }
         .login-atmosphere > * { position: relative; z-index: 1; }
-        .login-mark { font-size: 12px; font-weight: 750; opacity: 0.78; }
-        .login-title { max-width: 560px; font-size: 43px; line-height: 1.12; font-weight: 780; margin-top: 90px; }
-        .login-en { font-size: 14px; opacity: 0.76; margin-top: 14px; }
-        .login-copy { max-width: 520px; font-size: 14px; line-height: 1.8; opacity: 0.82; margin-top: 28px; }
-        .login-points { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 28px; }
-        .login-point { padding: 7px 10px; border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; background: rgba(255,255,255,0.10); font-size: 11px; }
-        .login-form-title { color: var(--ink); font-size: 25px; font-weight: 760; margin-top: 28px; }
-        .login-form-copy { color: var(--muted); font-size: 13px; margin: 7px 0 28px; }
-        .login-foot { color: var(--weak); font-size: 11px; margin-top: 20px; }
+        .login-logo {
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.30);
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 820;
+            box-shadow: 0 12px 30px rgba(23,32,51,.16);
+        }
+        .login-mark { color: #ffffff; font-size: 12px; font-weight: 760; opacity: 0.92; margin-top: 24px; }
+        .login-title { max-width: 560px; color: #ffffff; font-size: 43px; line-height: 1.12; font-weight: 790; margin-top: 64px; }
+        .login-en { color: rgba(255,255,255,.90); font-size: 14px; margin-top: 14px; }
+        .login-copy { max-width: 520px; color: rgba(255,255,255,.94); font-size: 15px; line-height: 1.8; margin-top: 26px; }
+        .login-points { display: grid; gap: 11px; margin-top: 30px; }
+        .login-point {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 620;
+        }
+        .login-point::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            flex: 0 0 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.95);
+            box-shadow: 0 0 0 4px rgba(255,255,255,.13);
+        }
+        .login-form-title { color: var(--ink); font-size: 27px; font-weight: 780; margin-top: 76px; }
+        .login-form-copy { color: #667085; font-size: 14px; margin: 9px 0 30px; }
+        .login-foot { color: #7b8497; font-size: 12px; margin-top: 24px; text-align: center; }
         .st-key-login_card {
-            min-height: 530px;
-            padding: 34px 30px !important;
-            background: rgba(255, 255, 255, 0.88);
-            border: 1px solid rgba(255, 255, 255, 0.94) !important;
-            border-radius: 8px;
-            box-shadow: 0 22px 54px rgba(79, 107, 255, 0.10), 0 8px 20px rgba(23,32,51,.05);
-            backdrop-filter: blur(18px);
+            min-height: 560px;
+            height: 100%;
+            padding: 42px 44px !important;
+            background: #ffffff !important;
+            border: 1px solid rgba(123, 135, 158, 0.14) !important;
+            border-radius: 28px !important;
+            box-shadow: 0 28px 70px rgba(55, 65, 100, 0.14), 0 8px 24px rgba(23,32,51,.06) !important;
+            backdrop-filter: none;
+        }
+        .st-key-login_card div[data-baseweb="input"] > div {
+            min-height: 54px;
+            background: #ffffff !important;
+            border: 1px solid #cfd5e2 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 3px 10px rgba(31,41,55,.035);
+        }
+        .st-key-login_card div[data-baseweb="input"] input {
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
+            opacity: 1 !important;
+        }
+        .st-key-login_card .stButton > button {
+            min-height: 52px;
+            margin-top: 10px;
+            border-radius: 14px;
+            font-size: 14px;
+            background: linear-gradient(135deg, #4f6bff, #8b5cf6);
+            box-shadow: 0 12px 26px rgba(79,107,255,.25);
         }
         .st-key-view_controls,
         .st-key-trend_filters,
@@ -930,8 +997,15 @@ def inject_custom_css():
         @media (max-width: 900px) {
             .block-container { padding-left: 1rem; padding-right: 1rem; }
             .main-title { font-size: 28px; }
-            .login-atmosphere { min-height: 360px; padding: 32px; }
-            .login-title { margin-top: 46px; font-size: 34px; }
+            .st-key-login_page { min-height: auto; padding: 16px 0 32px; }
+            .st-key-login_page div[data-testid="stHorizontalBlock"] { display: block; }
+            .st-key-login_page div[data-testid="column"] { width: 100% !important; margin-bottom: 18px; }
+            .login-atmosphere { min-height: 390px; padding: 34px; border-radius: 22px; }
+            .login-title { margin-top: 38px; font-size: 34px; }
+            .login-copy { margin-top: 20px; }
+            .login-points { margin-top: 22px; }
+            .st-key-login_card { min-height: auto; padding: 30px 26px 32px !important; border-radius: 22px !important; }
+            .login-form-title { margin-top: 4px; font-size: 24px; }
             .business-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         </style>
@@ -1247,39 +1321,47 @@ def require_password() -> bool:
     if st.session_state.get("authenticated"):
         return True
 
-    left, right = st.columns([1.2, 0.8], gap="large", vertical_alignment="center")
-    with left:
-        st.markdown(
-            """
-            <div class="login-atmosphere">
-                <div>
-                    <div class="login-mark">COMMERCE OPERATING INTELLIGENCE</div>
-                    <div class="login-title">电商经营复盘看板</div>
-                    <div class="login-en">Commerce Intelligence Dashboard</div>
-                    <div class="login-copy">追踪最护与碧维的日常经营表现，识别趋势、效率与风险。</div>
-                    <div class="login-points">
-                        <span class="login-point">双品牌经营总览</span>
-                        <span class="login-point">日 / 月趋势追踪</span>
-                        <span class="login-point">渠道效率复盘</span>
+    with st.container(key="login_page"):
+        left, right = st.columns([1.1, 0.9], gap="large", vertical_alignment="center")
+        with left:
+            st.markdown(
+                """
+                <div class="login-atmosphere">
+                    <div>
+                        <div class="login-logo">BI</div>
+                        <div class="login-mark">COMMERCE OPERATING INTELLIGENCE</div>
+                        <div class="login-title">电商经营复盘看板</div>
+                        <div class="login-en">Commerce Intelligence Dashboard</div>
+                        <div class="login-copy">追踪最护与碧维的日常经营表现，识别趋势、效率与风险。</div>
+                        <div class="login-points">
+                            <span class="login-point">双品牌经营总览</span>
+                            <span class="login-point">日 / 月趋势追踪</span>
+                            <span class="login-point">渠道效率复盘</span>
+                        </div>
                     </div>
+                    <div class="login-mark">INTERNAL BUSINESS VIEW</div>
                 </div>
-                <div class="login-mark">INTERNAL BUSINESS VIEW</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with right:
-        with st.container(border=True, key="login_card"):
-            st.markdown('<div class="login-form-title">欢迎进入 BOSS 看板</div>', unsafe_allow_html=True)
-            st.markdown('<div class="login-form-copy">请输入访问密码</div>', unsafe_allow_html=True)
-            entered = st.text_input("访问密码", type="password", label_visibility="collapsed", key="login_password")
-            if st.button("进入看板", key="login_submit", use_container_width=True):
-                if entered == password:
-                    st.session_state["authenticated"] = True
-                    st.rerun()
-                else:
-                    st.error("密码不正确，请重新输入。")
-            st.markdown('<div class="login-foot">内部经营数据，仅限授权访问</div>', unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
+        with right:
+            with st.container(border=True, key="login_card"):
+                st.markdown('<div class="login-form-title">欢迎进入 BOSS 看板</div>', unsafe_allow_html=True)
+                st.markdown('<div class="login-form-copy">请输入访问密码</div>', unsafe_allow_html=True)
+                entered = st.text_input(
+                    "访问密码",
+                    type="password",
+                    placeholder="请输入访问密码",
+                    label_visibility="collapsed",
+                    key="login_password",
+                )
+                if st.button("进入看板", key="login_submit", use_container_width=True):
+                    if entered == password:
+                        st.session_state["authenticated"] = True
+                        st.rerun()
+                    else:
+                        st.error("密码不正确，请重新输入。")
+                st.markdown('<div class="login-foot">内部经营数据，仅限授权访问</div>', unsafe_allow_html=True)
     return False
 
 
@@ -1967,7 +2049,8 @@ def main():
     st.set_page_config(page_title="电商经营复盘看板", layout="wide")
     inject_custom_css()
 
-    if not require_password():
+    is_authenticated = require_password()
+    if not is_authenticated:
         return
 
     render_dashboard_header()
