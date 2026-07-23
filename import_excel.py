@@ -34,25 +34,37 @@ def joined_values(df: pd.DataFrame, column: str, fallback: str = "未识别") ->
 
 
 def print_zuihu_douyin_roi_audit(daily_df: pd.DataFrame) -> None:
-    print("\n最护抖店 ROI 核对：")
+    print("\n最护抖店整体 ROI 核对：")
     if daily_df.empty:
         print("无可核对数据")
         return
     audit = daily_df[
         (daily_df["brand"].astype(str).str.strip() == "最护")
         & (daily_df["platform"].astype(str).str.strip() == "抖店")
+        & (daily_df["channel"].astype(str).str.strip() == "整体")
     ].copy()
     if audit.empty:
-        print("未解析到最护 / 抖店数据")
+        print("未解析到最护 / 抖店 / 整体数据")
         return
-    for column in ["gmv", "ad_spend", "roi"]:
+    audit_columns = [
+        "date",
+        "brand",
+        "platform",
+        "channel",
+        "gmv",
+        "ad_spend",
+        "roi",
+        "source_file",
+        "source_sheet",
+    ]
+    for column in audit_columns:
         if column not in audit.columns:
             audit[column] = pd.NA
-    if "roi_source" not in audit.columns:
-        audit["roi_source"] = "缺失"
     audit["date"] = pd.to_datetime(audit["date"], errors="coerce").dt.strftime("%Y-%m-%d")
-    audit = audit.sort_values(["date", "channel"], ascending=[False, True])
-    print(audit[["date", "channel", "gmv", "ad_spend", "roi", "roi_source"]].head(30).to_string(index=False))
+    audit = audit.sort_values("date", ascending=False)
+    print(audit[audit_columns].head(30).to_string(index=False))
+    if "roi_source" in audit.columns:
+        print("ROI 来源：" + "、".join(sorted(audit["roi_source"].dropna().astype(str).unique())))
     if len(audit) > 30:
         print(f"仅显示最近 30 条，共 {len(audit)} 条。")
 
@@ -124,8 +136,6 @@ def print_import_preview(excel_files: list[Path], raw_df, daily_df) -> None:
     print("最终 daily_metrics 平台：" + "、".join(sorted(daily_df["platform"].dropna().astype(str).unique())))
     print("最终 daily_metrics 渠道：" + "、".join(sorted(daily_df["channel"].dropna().astype(str).unique())))
     print()
-    print_zuihu_douyin_roi_audit(daily_df)
-    print()
 
 
 def database_summary(engine) -> tuple[int, str]:
@@ -184,6 +194,7 @@ def main() -> int:
     print_import_preview(excel_files, raw_df, daily_df)
 
     if args.dry_run:
+        print_zuihu_douyin_roi_audit(daily_df)
         print("dry-run 模式：只解析和打印预览，不写入数据库。")
         print(f"读取文件数：{len(excel_files)}")
         print(f"raw_metrics 条数：{len(raw_df)}")
@@ -254,6 +265,8 @@ def main() -> int:
             print(f"- {reason}")
     else:
         print("失败原因：无")
+
+    print_zuihu_douyin_roi_audit(daily_df)
 
     print("\n提示：如果之前错误导入过 6 月数据，并且怀疑覆盖了 7 月数据，请不要让脚本自动清库。")
     print("最简单的修复方式是：你确认后手动清空 daily_metrics 和 raw_metrics 测试数据，再用修复后的脚本重新导入 6 月，然后重新导入 7 月。")
