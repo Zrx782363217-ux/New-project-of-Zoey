@@ -26,6 +26,37 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 
 
+def joined_values(df: pd.DataFrame, column: str, fallback: str = "未识别") -> str:
+    if df.empty or column not in df.columns:
+        return fallback
+    values = sorted({str(value).strip() for value in df[column].dropna() if str(value).strip()})
+    return "、".join(values) if values else fallback
+
+
+def print_zuihu_douyin_roi_audit(daily_df: pd.DataFrame) -> None:
+    print("\n最护抖店 ROI 核对：")
+    if daily_df.empty:
+        print("无可核对数据")
+        return
+    audit = daily_df[
+        (daily_df["brand"].astype(str).str.strip() == "最护")
+        & (daily_df["platform"].astype(str).str.strip() == "抖店")
+    ].copy()
+    if audit.empty:
+        print("未解析到最护 / 抖店数据")
+        return
+    for column in ["gmv", "ad_spend", "roi"]:
+        if column not in audit.columns:
+            audit[column] = pd.NA
+    if "roi_source" not in audit.columns:
+        audit["roi_source"] = "缺失"
+    audit["date"] = pd.to_datetime(audit["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    audit = audit.sort_values(["date", "channel"], ascending=[False, True])
+    print(audit[["date", "channel", "gmv", "ad_spend", "roi", "roi_source"]].head(30).to_string(index=False))
+    if len(audit) > 30:
+        print(f"仅显示最近 30 条，共 {len(audit)} 条。")
+
+
 def get_local_database_url() -> str:
     load_dotenv(BASE_DIR / ".env", override=True)
     database_url = os.getenv("DATABASE_URL", "")
@@ -44,6 +75,12 @@ def print_import_preview(excel_files: list[Path], raw_df, daily_df) -> None:
     print("\n导入前预览：")
     for path in excel_files:
         file_raw = raw_df[raw_df["source_file"] == path.name] if not raw_df.empty else pd.DataFrame()
+        if not daily_df.empty and "source_file" in daily_df.columns:
+            file_daily = daily_df[
+                daily_df["source_file"].fillna("").astype(str).str.contains(path.name, regex=False)
+            ].copy()
+        else:
+            file_daily = pd.DataFrame()
         month = identify_month(path.name)
         min_date = file_raw["date"].min() if not file_raw.empty else None
         max_date = file_raw["date"].max() if not file_raw.empty else None
@@ -51,10 +88,28 @@ def print_import_preview(excel_files: list[Path], raw_df, daily_df) -> None:
             month = pd.Timestamp(min_date).month
         date_range = "未解析到日期" if pd.isna(min_date) or pd.isna(max_date) else f"{pd.Timestamp(min_date).date()} ~ {pd.Timestamp(max_date).date()}"
         print(f"文件：{path.name}")
-        print(f"识别品牌：{identify_brand(path.name)}")
-        print(f"识别平台：{identify_platform(path.name)}")
+        print(f"识别品牌：{joined_values(file_raw, 'brand', identify_brand(path.name))}")
+        print(f"识别平台：{joined_values(file_raw, 'platform', identify_platform(path.name))}")
+        print(f"识别渠道：{joined_values(file_raw, 'channel')}")
         print(f"识别月份：{month if month is not None else '未识别'}")
         print(f"解析日期范围：{date_range}")
+        original_roi_found = (
+            not file_raw.empty
+            and "metric_std" in file_raw.columns
+            and (file_raw["metric_std"] == "roi").any()
+        )
+        print(f"原始 ROI 指标是否识别到：{'是' if original_roi_found else '否'}")
+        print("daily_metrics ROI 前 5 条样例：")
+        if file_daily.empty:
+            print("无")
+        else:
+            for column in ["date", "channel", "roi", "roi_source"]:
+                if column not in file_daily.columns:
+                    file_daily[column] = pd.NA
+            sample = file_daily[["date", "channel", "roi", "roi_source"]].sort_values(
+                ["date", "channel"]
+            ).head(5)
+            print(sample.to_string(index=False))
         print()
 
     if daily_df.empty:
@@ -68,6 +123,8 @@ def print_import_preview(excel_files: list[Path], raw_df, daily_df) -> None:
     print("最终 daily_metrics 品牌：" + "、".join(sorted(daily_df["brand"].dropna().astype(str).unique())))
     print("最终 daily_metrics 平台：" + "、".join(sorted(daily_df["platform"].dropna().astype(str).unique())))
     print("最终 daily_metrics 渠道：" + "、".join(sorted(daily_df["channel"].dropna().astype(str).unique())))
+    print()
+    print_zuihu_douyin_roi_audit(daily_df)
     print()
 
 
