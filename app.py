@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import os
 from datetime import date
@@ -17,6 +18,7 @@ from db import get_engine, init_db, load_daily_metrics
 
 
 load_dotenv(override=True)
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -233,11 +235,16 @@ def map_metric(metric: str) -> str | None:
     normalized = normalize_metric_name(metric)
     if not normalized:
         return None
+    matches: list[tuple[int, str]] = []
     for standard, aliases in METRIC_ALIASES.items():
         for alias in aliases:
-            if normalize_metric_name(alias) in normalized:
-                return standard
-    return None
+            normalized_alias = normalize_metric_name(alias)
+            if normalized_alias and normalized_alias in normalized:
+                matches.append((len(normalized_alias), standard))
+    if not matches:
+        return None
+    # Longer aliases are more specific, e.g. 净ROI must win over ROI.
+    return max(matches, key=lambda item: item[0])[1]
 
 
 def detect_channel(*parts: str) -> str:
@@ -429,7 +436,13 @@ def parse_excel_sources(sources: list[tuple[str, object]]) -> tuple[pd.DataFrame
         if hasattr(file_obj, "seek"):
             file_obj.seek(0)
         try:
-            workbook = pd.read_excel(file_obj, sheet_name=None, header=None, engine="openpyxl")
+            workbook = pd.read_excel(
+                file_obj,
+                sheet_name=None,
+                header=None,
+                engine="openpyxl",
+                dtype=object,
+            )
         except Exception as exc:
             warnings.append(f"{filename} 读取失败：{exc}")
             continue
@@ -505,7 +518,11 @@ def build_operating_table(raw_df: pd.DataFrame) -> pd.DataFrame:
             metric_values = group.loc[group["metric_std"] == metric, "value"].dropna()
             if metric_values.empty:
                 row[metric] = pd.NA
-            elif metric in RATE_METRICS | ROI_METRICS:
+            elif metric in ROI_METRICS:
+                # Keep the original workbook value. Duplicate source rows use the
+                # last parsed value rather than averaging different ROI definitions.
+                row[metric] = metric_values.iloc[-1]
+            elif metric in RATE_METRICS:
                 row[metric] = metric_values.mean()
             else:
                 row[metric] = metric_values.sum()
@@ -523,10 +540,27 @@ def build_operating_table(raw_df: pd.DataFrame) -> pd.DataFrame:
     for col in STANDARD_COLUMNS[4:]:
         op_df[col] = pd.to_numeric(op_df[col], errors="coerce")
 
-    can_calc_roi = op_df["gmv"].notna() & op_df["ad_spend"].notna() & (op_df["ad_spend"] != 0)
-    op_df.loc[can_calc_roi, "roi"] = op_df.loc[can_calc_roi, "gmv"] / op_df.loc[can_calc_roi, "ad_spend"]
-    can_calc_net_roi = op_df["net_gmv"].notna() & op_df["ad_spend"].notna() & (op_df["ad_spend"] != 0)
-    op_df.loc[can_calc_net_roi, "net_roi"] = op_df.loc[can_calc_net_roi, "net_gmv"] / op_df.loc[can_calc_net_roi, "ad_spend"]
+    op_df["roi_source"] = "缺失"
+    op_df.loc[op_df["roi"].notna(), "roi_source"] = "原表ROI"
+    can_fill_roi = (
+        op_df["roi"].isna()
+        & op_df["gmv"].notna()
+        & op_df["ad_spend"].notna()
+        & (op_df["ad_spend"] != 0)
+    )
+    op_df.loc[can_fill_roi, "roi"] = op_df.loc[can_fill_roi, "gmv"] / op_df.loc[can_fill_roi, "ad_spend"]
+    op_df.loc[can_fill_roi, "roi_source"] = "系统补算"
+
+    op_df["net_roi_source"] = "缺失"
+    op_df.loc[op_df["net_roi"].notna(), "net_roi_source"] = "原表ROI"
+    can_fill_net_roi = (
+        op_df["net_roi"].isna()
+        & op_df["net_gmv"].notna()
+        & op_df["ad_spend"].notna()
+        & (op_df["ad_spend"] != 0)
+    )
+    op_df.loc[can_fill_net_roi, "net_roi"] = op_df.loc[can_fill_net_roi, "net_gmv"] / op_df.loc[can_fill_net_roi, "ad_spend"]
+    op_df.loc[can_fill_net_roi, "net_roi_source"] = "系统补算"
     return op_df
 
 
@@ -1079,13 +1113,65 @@ def aggregate_metrics(df: pd.DataFrame) -> dict:
             value = working[metric].sum(min_count=1)
             result[metric] = None if pd.isna(value) else float(value)
 
-    result["roi"] = ratio(result.get("gmv"), result.get("ad_spend"))
-    result["net_roi"] = ratio(result.get("net_gmv"), result.get("ad_spend"))
+    def aggregate_roi(metric: str, fallback_numerator: str) -> float | None:
+        if metric in working.columns:
+            values = pd.to_numeric(working[metric], errors="coerce")
+            valid_values = values.dropna()
+            if len(valid_values) == 1:
+                return float(valid_values.iloc[0])
+            if len(valid_values) > 1 and "ad_spend" in working.columns:
+                weights = pd.to_numeric(working["ad_spend"], errors="coerce")
+                valid = values.notna() & weights.notna() & (weights > 0)
+                total_weight = weights.loc[valid].sum()
+                if valid.any() and pd.notna(total_weight) and total_weight > 0:
+                    return float((values.loc[valid] * weights.loc[valid]).sum() / total_weight)
+            if len(valid_values) > 1:
+                return None
+        return ratio(result.get(fallback_numerator), result.get("ad_spend"))
+
+    result["roi"] = aggregate_roi("roi", "gmv")
+    result["net_roi"] = aggregate_roi("net_roi", "net_gmv")
     result["refund_rate"] = ratio(result.get("refund_amount"), result.get("gmv"))
     if result["refund_rate"] is None and "refund_rate" in working.columns:
         mean_refund = working["refund_rate"].dropna().mean()
         result["refund_rate"] = None if pd.isna(mean_refund) else float(mean_refund)
     return result
+
+
+def select_dashboard_primary_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Select non-overlapping platform totals for dashboard-level metrics."""
+    if df is None or df.empty:
+        return pd.DataFrame(columns=df.columns if isinstance(df, pd.DataFrame) else STANDARD_COLUMNS)
+
+    working = df.copy()
+    for column in ["brand", "platform", "channel"]:
+        if column not in working.columns:
+            working[column] = ""
+        working[column] = working[column].fillna("").astype(str).str.strip()
+
+    # 千川 belongs to the Douyin ad system and is excluded from dashboard GMV.
+    working = working[working["platform"].isin(["抖店", "拼多多"])]
+    if working.empty:
+        return working
+
+    group_columns = [column for column in ["date", "brand", "platform"] if column in working.columns]
+    selected_groups = []
+    for keys, group in working.groupby(group_columns, dropna=False, sort=False):
+        platform = str(group["platform"].iloc[0])
+        if platform == "拼多多":
+            selected_groups.append(group)
+            continue
+
+        overall_rows = group[group["channel"] == "整体"]
+        if not overall_rows.empty:
+            selected_groups.append(overall_rows)
+            continue
+        selected_groups.append(group)
+        logger.warning("抖店缺少整体数据，BOSS首页使用子渠道汇总估算：%s", keys)
+
+    if not selected_groups:
+        return working.iloc[0:0].copy()
+    return pd.concat(selected_groups, ignore_index=False).sort_index()
 
 
 def aggregate_for_period(df: pd.DataFrame, period: str) -> pd.DataFrame:
@@ -1170,8 +1256,8 @@ def prepare_trend_chart_df(df: pd.DataFrame, period: str, view_mode: str) -> pd.
         )
         group_columns = ["period_date", "brand", "display_platform", "display_channel"]
     else:
-        # 千川是抖店投放补充数据，默认品牌平台趋势不重复汇总其成交。
-        working = working[working["platform"] != "千川"]
+        # Brand/platform trends use platform totals and never add child channels twice.
+        working = select_dashboard_primary_rows(working)
         group_columns = ["period_date", "brand", "platform"]
 
     rows = []
@@ -1622,7 +1708,7 @@ def render_date_controls(op_df: pd.DataFrame) -> tuple[pd.Timestamp | None, str,
 
 
 def main_scope(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df["platform"].isin(["抖店", "拼多多"])].copy() if not df.empty else df.copy()
+    return select_dashboard_primary_rows(df)
 
 
 def generate_alerts(op_df: pd.DataFrame) -> pd.DataFrame:
@@ -1758,7 +1844,8 @@ def generate_alerts(op_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_df: pd.DataFrame | None, mode: str):
-    card_df = df[(df["brand"] == brand) & (df["platform"] == platform)] if not df.empty else pd.DataFrame()
+    card_source = df[(df["brand"] == brand) & (df["platform"] == platform)] if not df.empty else pd.DataFrame()
+    card_df = select_dashboard_primary_rows(card_source)
     brand_class = "brand-zuihu" if brand == "最护" else "brand-biwei"
     platform_class = "platform-douyin" if platform == "抖店" else "platform-pdd"
     if card_df.empty:
@@ -1776,8 +1863,21 @@ def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_d
         )
         return
 
+    fallback_used = False
+    if platform == "抖店" and not card_source.empty:
+        fallback_used = any(
+            not (group["channel"].fillna("").astype(str).str.strip() == "整体").any()
+            for _, group in card_source.groupby("date", dropna=False)
+        )
+
     current = aggregate_metrics(card_df)
-    previous = aggregate_metrics(previous_df[(previous_df["brand"] == brand) & (previous_df["platform"] == platform)]) if previous_df is not None and not previous_df.empty else {}
+    if previous_df is not None and not previous_df.empty:
+        previous_source = previous_df[
+            (previous_df["brand"] == brand) & (previous_df["platform"] == platform)
+        ]
+        previous = aggregate_metrics(select_dashboard_primary_rows(previous_source))
+    else:
+        previous = {}
     gmv_delta, gmv_state = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("gmv"), previous.get("gmv"))
     roi_delta, _ = ("本月累计暂无对比", "flat") if mode == "本月累计" else format_delta(current.get("roi"), previous.get("roi"))
 
@@ -1792,6 +1892,8 @@ def render_business_card(brand: str, platform: str, df: pd.DataFrame, previous_d
         status, status_class, status_note = "关注", "state-watch", "成交出现波动，建议关注流量与转化承接。"
     else:
         status, status_class, status_note = "正常", "state-normal", "当前经营状态平稳，继续观察趋势变化。"
+    if fallback_used:
+        status_note = "当前无整体数据，使用子渠道汇总估算。"
 
     stats = [
         ("单量", format_number(current.get("orders"))),
@@ -1873,10 +1975,11 @@ def render_boss_home(op_df: pd.DataFrame):
         cols = st.columns(2)
         for col, (brand, platform) in zip(cols, row):
             with col:
-                render_business_card(brand, platform, current_main, previous_main, mode)
+                render_business_card(brand, platform, current_df, previous_df, mode)
 
     st.markdown('<div class="section-title">当前日期核心提醒</div>', unsafe_allow_html=True)
-    alert_df = generate_alerts(current_df if mode == "本日数据" else current_df[current_df["date"] == selected_date])
+    alert_source = current_main if mode == "本日数据" else main_scope(current_df[current_df["date"] == selected_date])
+    alert_df = generate_alerts(alert_source)
     if alert_df.empty:
         render_info_box("经营状态整体平稳，可继续观察趋势变化。", title="当前日期暂无明显异常")
     else:
